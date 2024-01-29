@@ -82,6 +82,8 @@ These changes are available on the `master` branch, but have not yet been releas
 - Added `default_reaction_emoji` parameter to `Guild.create_forum_channel()` and
   `ForumChannel.edit()` methods.
   ([#2178](https://github.com/Pycord-Development/pycord/pull/2178))
+- Added `applied_tags` parameter to `Webhook.send()` method.
+  ([#2322](https://github.com/Pycord-Development/pycord/pull/2322))
 
 ### Changed
 
@@ -113,6 +115,8 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2099](https://github.com/Pycord-Development/pycord/pull/2099))
 - Changed the support from `orjson` to `msgspec` in the codebase.
   ([#2170](https://github.com/Pycord-Development/pycord/pull/2170))
+- `BridgeOption` must now be used for arguments in bridge commands.
+  ([#2252](https://github.com/Pycord-Development/pycord/pull/2252))
 
 ### Removed
 
@@ -203,6 +207,23 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2257](https://github.com/Pycord-Development/pycord/issues/2257))
 - Fixed `AuditLogIterator` not respecting the `after` parameter.
   ([#2295](https://github.com/Pycord-Development/pycord/issues/2295))
+- Fixed `AttributeError` when failing to establish initial websocket connection.
+  ([#2301](https://github.com/Pycord-Development/pycord/pull/2301))
+- Fixed `AttributeError` caused by `command.cog` being `MISSING`.
+  ([#2303](https://github.com/Pycord-Development/pycord/issues/2303))
+- Fixed `self.use_default_buttons` being assumed truthy by `Paginator.update`.
+  ([#2319](https://github.com/Pycord-Development/pycord/pull/2319))
+- Fixed `AttributeError` when comparing application commands with non-command objects.
+  ([#2299](https://github.com/Pycord-Development/pycord/issues/2299))
+- Fixed `AttributeError` when copying groups on startup.
+  ([#2331](https://github.com/Pycord-Development/pycord/issues/2331))
+- Fixed application command options causing errors if declared through the option
+  decorator or kwarg.
+  ([#2332](https://github.com/Pycord-Development/pycord/issues/2332))
+- Fixed options declared using the 'default' syntax always being optional.
+  ([#2333](https://github.com/Pycord-Development/pycord/issues/2333))
+- Fixed `BridgeContext` type hints raising an exception for unsupported option type.
+  ([#2337](https://github.com/Pycord-Development/pycord/pull/2337))
 
 ## [2.4.1] - 2023-03-20
 
