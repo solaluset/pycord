@@ -69,6 +69,8 @@ if TYPE_CHECKING:
         invite,
         member,
         message,
+        monetization,
+        onboarding,
         role,
         scheduled_events,
         sticker,
@@ -1128,11 +1130,13 @@ class HTTPClient:
         *,
         name: str,
         auto_archive_duration: threads.ThreadArchiveDuration,
+        rate_limit_per_user: int,
         reason: str | None = None,
     ) -> Response[threads.Thread]:
         payload = {
             "name": name,
             "auto_archive_duration": auto_archive_duration,
+            "rate_limit_per_user": rate_limit_per_user,
         }
 
         route = Route(
@@ -1150,13 +1154,15 @@ class HTTPClient:
         name: str,
         auto_archive_duration: threads.ThreadArchiveDuration,
         type: threads.ThreadType,
-        invitable: bool = True,
+        rate_limit_per_user: int,
+        invitable: bool,
         reason: str | None = None,
     ) -> Response[threads.Thread]:
         payload = {
             "name": name,
             "auto_archive_duration": auto_archive_duration,
             "type": type,
+            "rate_limit_per_user": rate_limit_per_user,
             "invitable": invitable,
         }
 
@@ -2883,6 +2889,78 @@ class HTTPClient:
             application_id=application_id,
         )
         return self.request(r, json=payload)
+
+    # Monetization
+
+    def list_skus(
+        self,
+        application_id: Snowflake,
+    ) -> Response[list[monetization.SKU]]:
+        r = Route(
+            "GET",
+            "/applications/{application_id}/skus",
+            application_id=application_id,
+        )
+        return self.request(r)
+
+    def list_entitlements(
+        self,
+        application_id: Snowflake,
+    ) -> Response[list[monetization.Entitlement]]:
+        r = Route(
+            "GET",
+            "/applications/{application_id}/entitlements",
+            application_id=application_id,
+        )
+        return self.request(r)
+
+    def create_test_entitlement(
+        self,
+        application_id: Snowflake,
+        payload: monetization.CreateTestEntitlementPayload,
+    ) -> Response[monetization.Entitlement]:
+        r = Route(
+            "POST",
+            "/applications/{application_id}/entitlements",
+            application_id=application_id,
+        )
+        return self.request(r, json=payload)
+
+    def delete_test_entitlement(
+        self,
+        application_id: Snowflake,
+        entitlement_id: Snowflake,
+    ) -> Response[None]:
+        r = Route(
+            "DELETE",
+            "/applications/{application_id}/entitlements/{entitlement_id}",
+            application_id=application_id,
+            entitlement_id=entitlement_id,
+        )
+        return self.request(r)
+
+    # Onboarding
+
+    def get_onboarding(self, guild_id: Snowflake) -> Response[onboarding.Onboarding]:
+        return self.request(
+            Route("GET", "/guilds/{guild_id}/onboarding", guild_id=guild_id)
+        )
+
+    def edit_onboarding(
+        self, guild_id: Snowflake, payload: Any, *, reason: str | None = None
+    ) -> Response[onboarding.Onboarding]:
+        keys = (
+            "prompts",
+            "default_channel_ids",
+            "enabled",
+            "mode",
+        )
+        payload = {key: val for key, val in payload.items() if key in keys}
+        return self.request(
+            Route("PUT", "/guilds/{guild_id}/onboarding", guild_id=guild_id),
+            json=payload,
+            reason=reason,
+        )
 
     # Misc
 
