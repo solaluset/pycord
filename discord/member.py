@@ -769,7 +769,7 @@ class Member(discord.abc.Messageable, _UserTag):
 
         roles: List[:class:`Role`]
             The member's new list of roles. This *replaces* the roles.
-        voice_channel: Optional[:class:`VoiceChannel`]
+        voice_channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`]]
             The voice channel to move the member to.
             Pass ``None`` to kick them from voice.
         reason: Optional[:class:`str`]
@@ -824,9 +824,9 @@ class Member(discord.abc.Messageable, _UserTag):
                 await http.edit_my_voice_state(guild_id, voice_state_payload)
             else:
                 if not suppress:
-                    voice_state_payload[
-                        "request_to_speak_timestamp"
-                    ] = datetime.datetime.utcnow().isoformat()
+                    voice_state_payload["request_to_speak_timestamp"] = (
+                        datetime.datetime.utcnow().isoformat()
+                    )
                 await http.edit_voice_state(guild_id, self.id, voice_state_payload)
 
         if voice_channel is not MISSING:
@@ -837,9 +837,9 @@ class Member(discord.abc.Messageable, _UserTag):
 
         if communication_disabled_until is not MISSING:
             if communication_disabled_until is not None:
-                payload[
-                    "communication_disabled_until"
-                ] = communication_disabled_until.isoformat()
+                payload["communication_disabled_until"] = (
+                    communication_disabled_until.isoformat()
+                )
             else:
                 payload["communication_disabled_until"] = communication_disabled_until
 
@@ -958,7 +958,7 @@ class Member(discord.abc.Messageable, _UserTag):
             await self._state.http.edit_my_voice_state(self.guild.id, payload)
 
     async def move_to(
-        self, channel: VocalGuildChannel, *, reason: str | None = None
+        self, channel: VocalGuildChannel | None, *, reason: str | None = None
     ) -> None:
         """|coro|
 
@@ -974,7 +974,7 @@ class Member(discord.abc.Messageable, _UserTag):
 
         Parameters
         ----------
-        channel: Optional[:class:`VoiceChannel`]
+        channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`]]
             The new voice channel to move the member to.
             Pass ``None`` to kick them from voice.
         reason: Optional[:class:`str`]

@@ -12,6 +12,26 @@ These changes are available on the `master` branch, but have not yet been releas
 
 ### Added
 
+- Added `banner` parameter to `ClientUser.edit`.
+  ([#2396](https://github.com/Pycord-Development/pycord/pull/2396))
+
+### Fixed
+
+- Fixed the type-hinting of `Member.move_to` and `Member.edit` to reflect actual
+  behavior. ([#2386](https://github.com/Pycord-Development/pycord/pull/2386))
+- Fixed a deprecation warning from being displayed when running `python -m discord -v`
+  by replacing the deprecated module.
+  ([#2392](https://github.com/Pycord-Development/pycord/pull/2392))
+
+### Changed
+
+- Changed the type of `Guild.bitrate_limit` to `int`.
+  ([#2387](https://github.com/Pycord-Development/pycord/pull/2387))
+
+## [2.5.0] - 2024-03-02
+
+### Added
+
 - Added method to start bot via async context manager.
   ([#1801](https://github.com/Pycord-Development/pycord/pull/1801))
 - Added parameters `author`, `footer`, `image` and `thumbnail` to `discord.Embed`
@@ -93,6 +113,12 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2342](https://github.com/Pycord-Development/pycord/pull/2342))
 - Added `invitable` and `slowmode_delay` to `Thread` creation methods.
   ([#2350](https://github.com/Pycord-Development/pycord/pull/2350))
+- Added support for voice channel statuses.
+  ([#2368](https://github.com/Pycord-Development/pycord/pull/2368))
+- Added `enforce_nonce` parameter for message sending.
+  ([#2370](https://github.com/Pycord-Development/pycord/pull/2370))
+- Added audit log support for voice channel status.
+  ([#2373](https://github.com/Pycord-Development/pycord/pull/2373))
 
 ### Changed
 
@@ -239,6 +265,10 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2345](https://github.com/Pycord-Development/pycord/pull/2345))
 - Fixed `Thread.me` being out of date and added the thread owner to `Thread.members` on
   creation. ([#1296](https://github.com/Pycord-Development/pycord/issues/1296))
+- Fixed keyword argument wildcard of `bridge.has_permissions` having the wrong type
+  hint. ([#2364](https://github.com/Pycord-Development/pycord/pull/2364))
+- Fixed enum to support stringified annotations.
+  ([#2367](https://github.com/Pycord-Development/pycord/pull/2367))
 
 ## [2.4.1] - 2023-03-20
 
@@ -768,7 +798,8 @@ These changes are available on the `master` branch, but have not yet been releas
 - Fix py3.10 UnionType checks issue.
   ([#1240](https://github.com/Pycord-Development/pycord/pull/1240))
 
-[unreleased]: https://github.com/Pycord-Development/pycord/compare/v2.4.1...HEAD
+[unreleased]: https://github.com/Pycord-Development/pycord/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/Pycord-Development/pycord/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/Pycord-Development/pycord/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/Pycord-Development/pycord/compare/v2.3.3...v2.4.0
 [2.3.3]: https://github.com/Pycord-Development/pycord/compare/v2.3.2...v2.3.3

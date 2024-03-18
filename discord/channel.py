@@ -780,12 +780,10 @@ class TextChannel(discord.abc.Messageable, _TextChannel):
         default_thread_slowmode_delay: int = ...,
         type: ChannelType = ...,
         overwrites: Mapping[Role | Member | Snowflake, PermissionOverwrite] = ...,
-    ) -> TextChannel | None:
-        ...
+    ) -> TextChannel | None: ...
 
     @overload
-    async def edit(self) -> TextChannel | None:
-        ...
+    async def edit(self) -> TextChannel | None: ...
 
     async def edit(self, *, reason=None, **options):
         """|coro|
@@ -1090,12 +1088,10 @@ class ForumChannel(_TextChannel):
         available_tags: list[ForumTag] = ...,
         require_tag: bool = ...,
         overwrites: Mapping[Role | Member | Snowflake, PermissionOverwrite] = ...,
-    ) -> ForumChannel | None:
-        ...
+    ) -> ForumChannel | None: ...
 
     @overload
-    async def edit(self) -> ForumChannel | None:
-        ...
+    async def edit(self) -> ForumChannel | None: ...
 
     async def edit(self, *, reason=None, **options):
         """|coro|
@@ -1524,19 +1520,36 @@ class VoiceChannel(discord.abc.Messageable, VocalGuildChannel):
         :attr:`~Permissions.manage_messages` bypass slowmode.
 
         .. versionadded:: 2.5
+    status: Optional[:class:`str`]
+        The channel's status, if set.
+
+        .. versionadded:: 2.5
     flags: :class:`ChannelFlags`
         Extra features of the channel.
 
         .. versionadded:: 2.0
     """
 
+    def __init__(
+        self,
+        *,
+        state: ConnectionState,
+        guild: Guild,
+        data: VoiceChannelPayload,
+    ):
+        self.status: str | None = None
+        super().__init__(state=state, guild=guild, data=data)
+
     def _update(self, guild: Guild, data: VoiceChannelPayload):
         super()._update(guild, data)
+        if data.get("status"):
+            self.status = data.get("status")
 
     def __repr__(self) -> str:
         attrs = [
             ("id", self.id),
             ("name", self.name),
+            ("status", self.status),
             ("rtc_region", self.rtc_region),
             ("position", self.position),
             ("bitrate", self.bitrate),
@@ -1834,12 +1847,10 @@ class VoiceChannel(discord.abc.Messageable, VocalGuildChannel):
         video_quality_mode: VideoQualityMode = ...,
         slowmode_delay: int = ...,
         reason: str | None = ...,
-    ) -> VoiceChannel | None:
-        ...
+    ) -> VoiceChannel | None: ...
 
     @overload
-    async def edit(self) -> VoiceChannel | None:
-        ...
+    async def edit(self) -> VoiceChannel | None: ...
 
     async def edit(self, *, reason=None, **options):
         """|coro|
@@ -1960,6 +1971,31 @@ class VoiceChannel(discord.abc.Messageable, VocalGuildChannel):
             target_application_id=activity,
             **kwargs,
         )
+
+    async def set_status(
+        self, status: str | None, *, reason: str | None = None
+    ) -> None:
+        """|coro|
+
+        Sets the status of the voice channel.
+
+        You must have the :attr:`~Permissions.set_voice_channel_status` permission to use this.
+
+        Parameters
+        ----------
+        status: Union[:class:`str`, None]
+            The new status.
+        reason: Optional[:class:`str`]
+            The reason for setting the status. Shows up on the audit log.
+
+        Raises
+        ------
+        Forbidden
+            You do not have proper permissions to set the status.
+        HTTPException
+            Setting the status failed.
+        """
+        await self._state.http.set_voice_channel_status(self.id, status, reason=reason)
 
 
 class StageChannel(discord.abc.Messageable, VocalGuildChannel):
@@ -2459,12 +2495,10 @@ class StageChannel(discord.abc.Messageable, VocalGuildChannel):
         rtc_region: VoiceRegion | None = ...,
         video_quality_mode: VideoQualityMode = ...,
         reason: str | None = ...,
-    ) -> StageChannel | None:
-        ...
+    ) -> StageChannel | None: ...
 
     @overload
-    async def edit(self) -> StageChannel | None:
-        ...
+    async def edit(self) -> StageChannel | None: ...
 
     async def edit(self, *, reason=None, **options):
         """|coro|
@@ -2638,12 +2672,10 @@ class CategoryChannel(discord.abc.GuildChannel, Hashable):
         nsfw: bool = ...,
         overwrites: Mapping[Role | Member, PermissionOverwrite] = ...,
         reason: str | None = ...,
-    ) -> CategoryChannel | None:
-        ...
+    ) -> CategoryChannel | None: ...
 
     @overload
-    async def edit(self) -> CategoryChannel | None:
-        ...
+    async def edit(self) -> CategoryChannel | None: ...
 
     async def edit(self, *, reason=None, **options):
         """|coro|

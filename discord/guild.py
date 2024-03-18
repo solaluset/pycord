@@ -539,7 +539,7 @@ class Guild(Hashable):
         )
 
         self.owner_id: int | None = utils._get_as_snowflake(guild, "owner_id")
-        self.afk_channel: VocalGuildChannel | None = self.get_channel(
+        self.afk_channel: VoiceChannel | None = self.get_channel(
             utils._get_as_snowflake(guild, "afk_channel_id")
         )  # type: ignore
 
@@ -823,14 +823,16 @@ class Guild(Hashable):
         )
 
     @property
-    def bitrate_limit(self) -> float:
+    def bitrate_limit(self) -> int:
         """The maximum bitrate for voice channels this guild can have."""
         vip_guild = (
             self._PREMIUM_GUILD_LIMITS[1].bitrate
             if "VIP_REGIONS" in self.features
             else 96e3
         )
-        return max(vip_guild, self._PREMIUM_GUILD_LIMITS[self.premium_tier].bitrate)
+        return int(
+            max(vip_guild, self._PREMIUM_GUILD_LIMITS[self.premium_tier].bitrate)
+        )
 
     @property
     def filesize_limit(self) -> int:
@@ -1509,9 +1511,9 @@ class Guild(Hashable):
                     "default_reaction_emoji must be of type: Emoji | int | str"
                 )
 
-            options[
-                "default_reaction_emoji"
-            ] = default_reaction_emoji._to_forum_reaction_payload()
+            options["default_reaction_emoji"] = (
+                default_reaction_emoji._to_forum_reaction_payload()
+            )
 
         data = await self._create_channel(
             name,
@@ -2829,8 +2831,7 @@ class Guild(Hashable):
         mentionable: bool = ...,
         icon: bytes | None = MISSING,
         unicode_emoji: str | None = MISSING,
-    ) -> Role:
-        ...
+    ) -> Role: ...
 
     @overload
     async def create_role(
@@ -2844,8 +2845,7 @@ class Guild(Hashable):
         mentionable: bool = ...,
         icon: bytes | None = ...,
         unicode_emoji: str | None = ...,
-    ) -> Role:
-        ...
+    ) -> Role: ...
 
     async def create_role(
         self,
@@ -3422,7 +3422,7 @@ class Guild(Hashable):
 
         Parameters
         ----------
-        channel: Optional[:class:`VoiceChannel`]
+        channel: Optional[Union[:class:`VoiceChannel`, :class:`StageChannel`]]
             Channel the client wants to join. Use ``None`` to disconnect.
         self_mute: :class:`bool`
             Indicates if the client should be self-muted.
@@ -3468,12 +3468,10 @@ class Guild(Hashable):
         description: str | None = ...,
         welcome_channels: list[WelcomeScreenChannel] | None = ...,
         enabled: bool | None = ...,
-    ) -> WelcomeScreen:
-        ...
+    ) -> WelcomeScreen: ...
 
     @overload
-    async def edit_welcome_screen(self) -> None:
-        ...
+    async def edit_welcome_screen(self) -> None: ...
 
     async def edit_welcome_screen(self, **options):
         """|coro|

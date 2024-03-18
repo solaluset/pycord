@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import types
@@ -438,6 +439,8 @@ class AuditLogAction(Enum):
     onboarding_update = 167
     server_guide_create = 190
     server_guide_update = 191
+    voice_channel_status_update = 192
+    voice_channel_status_delete = 193
 
     @property
     def category(self) -> AuditLogActionCategory | None:
@@ -505,6 +508,8 @@ class AuditLogAction(Enum):
             AuditLogAction.onboarding_update: AuditLogActionCategory.update,
             AuditLogAction.server_guide_create: AuditLogActionCategory.create,
             AuditLogAction.server_guide_update: AuditLogActionCategory.update,
+            AuditLogAction.voice_channel_status_update: AuditLogActionCategory.update,
+            AuditLogAction.voice_channel_status_delete: AuditLogActionCategory.delete,
         }
         return lookup[self]
 
@@ -551,6 +556,8 @@ class AuditLogAction(Enum):
             return "onboarding"
         elif v < 192:
             return "server_guide"
+        elif v < 194:
+            return "voice_channel_status"
 
 
 class UserFlags(Enum):
@@ -799,9 +806,13 @@ class SlashCommandOptionType(Enum):
             # Type checking fails for this case, so ignore it.
             return cls.from_datatype(datatype.__args__)  # type: ignore
 
-        if datatype.__name__ in ["Member", "User"]:
+        if isinstance(datatype, str):
+            datatype_name = datatype
+        else:
+            datatype_name = datatype.__name__
+        if datatype_name in ["Member", "User"]:
             return cls.user
-        if datatype.__name__ in [
+        if datatype_name in [
             "GuildChannel",
             "TextChannel",
             "VoiceChannel",
@@ -813,14 +824,14 @@ class SlashCommandOptionType(Enum):
             "DMChannel",
         ]:
             return cls.channel
-        if datatype.__name__ == "Role":
+        if datatype_name == "Role":
             return cls.role
-        if datatype.__name__ == "Attachment":
+        if datatype_name == "Attachment":
             return cls.attachment
-        if datatype.__name__ == "Mentionable":
+        if datatype_name == "Mentionable":
             return cls.mentionable
 
-        if issubclass(datatype, str):
+        if isinstance(datatype, str) or issubclass(datatype, str):
             return cls.string
         if issubclass(datatype, bool):
             return cls.boolean

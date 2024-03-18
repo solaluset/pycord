@@ -47,6 +47,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
   docs:
     runs-on: ubuntu-latest
+    if: github.repository == 'Pycord-Development/pycord'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
