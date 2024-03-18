@@ -56,6 +56,7 @@ if TYPE_CHECKING:
         ThreadMembersUpdateEvent,
         ThreadUpdateEvent,
         TypingEvent,
+        VoiceChannelStatusUpdateEvent,
     )
 
 
@@ -75,6 +76,7 @@ __all__ = (
     "AutoModActionExecutionEvent",
     "RawThreadMembersUpdateEvent",
     "RawAuditLogEntryEvent",
+    "RawVoiceChannelStatusUpdateEvent",
 )
 
 
@@ -441,6 +443,36 @@ class RawThreadDeleteEvent(_RawReprMixin):
         self.data: ThreadDeleteEvent = data
 
 
+class RawVoiceChannelStatusUpdateEvent(_RawReprMixin):
+    """Represents the payload for an :func:`on_raw_voice_channel_status_update` event.
+
+    .. versionadded:: 2.5
+
+    Attributes
+    ----------
+    id: :class:`int`
+        The channel ID where the voice channel status update originated from.
+    guild_id: :class:`int`
+        The guild ID where the voice channel status update originated from.
+    status: Optional[:class:`str`]
+        The new new voice channel status.
+    data: :class:`dict`
+        The raw data sent by the `gateway <https://discord.com/developers/docs/topics/gateway-events#voice-channel-status-update>`_.
+    """
+
+    __slots__ = ("id", "guild_id", "status", "data")
+
+    def __init__(self, data: VoiceChannelStatusUpdateEvent) -> None:
+        self.id: int = int(data["id"])
+        self.guild_id: int = int(data["guild_id"])
+
+        try:
+            self.status: str | None = data["status"]
+        except KeyError:
+            self.status: str | None = None
+        self.data: VoiceChannelStatusUpdateEvent = data
+
+
 class RawTypingEvent(_RawReprMixin):
     """Represents the payload for a :func:`on_raw_typing` event.
 
@@ -564,7 +596,7 @@ class AutoModActionExecutionEvent:
         The member that triggered the action, if cached.
     channel_id: Optional[:class:`int`]
         The ID of the channel in which the member's content was posted.
-    channel: Optional[Union[:class:`TextChannel`, :class:`Thread`, :class:`VoiceChannel`]]
+    channel: Optional[Union[:class:`TextChannel`, :class:`Thread`, :class:`VoiceChannel`, :class:`StageChannel`]]
         The channel in which the member's content was posted, if cached.
     message_id: Optional[:class:`int`]
         The ID of the message that triggered the action. This is only available if the

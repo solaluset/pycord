@@ -341,8 +341,7 @@ class GuildChannel:
 
         def __init__(
             self, *, state: ConnectionState, guild: Guild, data: dict[str, Any]
-        ):
-            ...
+        ): ...
 
     def __str__(self) -> str:
         return self.name
@@ -526,9 +525,9 @@ class GuildChannel:
                     "default_reaction_emoji must be of type: Emoji | int | str"
                 )
 
-            options[
-                "default_reaction_emoji"
-            ] = default_reaction_emoji._to_forum_reaction_payload()
+            options["default_reaction_emoji"] = (
+                default_reaction_emoji._to_forum_reaction_payload()
+            )
 
         if options:
             return await self._state.http.edit_channel(
@@ -853,8 +852,7 @@ class GuildChannel:
         *,
         overwrite: PermissionOverwrite | None = ...,
         reason: str | None = ...,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def set_permissions(
@@ -863,8 +861,7 @@ class GuildChannel:
         *,
         reason: str | None = ...,
         **permissions: bool,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def set_permissions(
         self, target, *, overwrite=MISSING, reason=None, **permissions
@@ -1033,8 +1030,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str | None = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def move(
@@ -1045,8 +1041,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def move(
@@ -1057,8 +1052,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     async def move(
@@ -1069,8 +1063,7 @@ class GuildChannel:
         category: Snowflake | None = MISSING,
         sync_permissions: bool = MISSING,
         reason: str = MISSING,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def move(self, **kwargs) -> None:
         """|coro|
@@ -1353,14 +1346,14 @@ class Messageable:
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
         nonce: str | int = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
         view: View = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     @overload
     async def send(
@@ -1373,14 +1366,14 @@ class Messageable:
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
         nonce: str | int = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
         view: View = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     @overload
     async def send(
@@ -1393,14 +1386,14 @@ class Messageable:
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
         nonce: str | int = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
         view: View = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     @overload
     async def send(
@@ -1413,14 +1406,14 @@ class Messageable:
         stickers: Sequence[GuildSticker | StickerItem] = ...,
         delete_after: float = ...,
         nonce: str | int = ...,
+        enforce_nonce: bool = ...,
         allowed_mentions: AllowedMentions = ...,
         reference: Message | MessageReference | PartialMessage = ...,
         mention_author: bool = ...,
         view: View = ...,
         suppress: bool = ...,
         silent: bool = ...,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     async def send(
         self,
@@ -1434,6 +1427,7 @@ class Messageable:
         stickers=None,
         delete_after=None,
         nonce=None,
+        enforce_nonce=None,
         allowed_mentions=None,
         reference=None,
         mention_author=None,
@@ -1474,6 +1468,10 @@ class Messageable:
         nonce: :class:`int`
             The nonce to use for sending this message. If the message was successfully sent,
             then the message will have a nonce with this value.
+        enforce_nonce: Optional[:class:`bool`]
+            Whether :attr:`nonce` is enforced to be validated.
+
+            .. versionadded:: 2.5
         delete_after: :class:`float`
             If provided, the number of seconds to wait in the background
             before deleting the message we just sent. If the deletion fails,
@@ -1613,6 +1611,7 @@ class Messageable:
                     embed=embed,
                     embeds=embeds,
                     nonce=nonce,
+                    enforce_nonce=enforce_nonce,
                     message_reference=reference,
                     stickers=stickers,
                     components=components,
@@ -1638,6 +1637,7 @@ class Messageable:
                     embed=embed,
                     embeds=embeds,
                     nonce=nonce,
+                    enforce_nonce=enforce_nonce,
                     allowed_mentions=allowed_mentions,
                     message_reference=reference,
                     stickers=stickers,
@@ -1655,6 +1655,7 @@ class Messageable:
                 embed=embed,
                 embeds=embeds,
                 nonce=nonce,
+                enforce_nonce=enforce_nonce,
                 allowed_mentions=allowed_mentions,
                 message_reference=reference,
                 stickers=stickers,

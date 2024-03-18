@@ -51,12 +51,10 @@ class flag_value:
         self.__doc__ = func.__doc__
 
     @overload
-    def __get__(self: FV, instance: None, owner: type[BF]) -> FV:
-        ...
+    def __get__(self: FV, instance: None, owner: type[BF]) -> FV: ...
 
     @overload
-    def __get__(self, instance: BF, owner: type[BF]) -> bool:
-        ...
+    def __get__(self, instance: BF, owner: type[BF]) -> bool: ...
 
     def __get__(self, instance: BF | None, owner: type[BF]) -> Any:
         if instance is None:
@@ -832,6 +830,11 @@ class Intents(BaseFlags):
 
         - :attr:`VoiceChannel.members`
         - :attr:`VoiceChannel.voice_states`
+        - :attr:`StageChannel.members`
+        - :attr:`StageChannel.speakers`
+        - :attr:`StageChannel.listeners`
+        - :attr:`StageChannel.moderators`
+        - :attr:`StageChannel.voice_states`
         - :attr:`Member.voice`
 
         .. note::
