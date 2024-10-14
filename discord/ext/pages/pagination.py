@@ -981,8 +981,8 @@ class Paginator(discord.ui.View):
         :class:`~discord.Message`
             The message that was sent with the paginator.
         """
-        if not isinstance(ctx, Context):
-            raise TypeError(f"expected Context not {ctx.__class__!r}")
+        # if not isinstance(ctx, Context):
+        #     raise TypeError(f"expected Context not {ctx.__class__!r}")
 
         if target is not None and not isinstance(target, discord.abc.Messageable):
             raise TypeError(f"expected abc.Messageable not {target.__class__!r}")
@@ -1030,9 +1030,9 @@ class Paginator(discord.ui.View):
             embeds=page_content.embeds,
             files=page_content.files,
             view=self,
-            reference=reference,
+            # reference=reference,
             allowed_mentions=allowed_mentions,
-            mention_author=mention_author,
+            # mention_author=mention_author,
             delete_after=delete_after,
         )
 
