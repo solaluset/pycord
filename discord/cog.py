@@ -346,7 +346,7 @@ class Cog(metaclass=CogMeta):
     def description(self, description: str) -> None:
         self.__cog_description__ = description
 
-    def walk_commands(self) -> Generator[ApplicationCommand, None, None]:
+    def walk_commands(self) -> Generator[ApplicationCommand]:
         """An iterator that recursively walks through this cog's commands and subcommands.
 
         Yields
@@ -379,7 +379,9 @@ class Cog(metaclass=CogMeta):
         )
 
     @classmethod
-    def listener(cls, name: str = MISSING) -> Callable[[FuncT], FuncT]:
+    def listener(
+        cls, name: str = MISSING, once: bool = False
+    ) -> Callable[[FuncT], FuncT]:
         """A decorator that marks a function as a listener.
 
         This is the cog equivalent of :meth:`.Bot.listen`.
@@ -389,6 +391,9 @@ class Cog(metaclass=CogMeta):
         name: :class:`str`
             The name of the event being listened to. If not provided, it
             defaults to the function's name.
+        once: :class:`bool`
+            If this listener should only be called once after each cog load.
+            Defaults to false.
 
         Raises
         ------
@@ -411,6 +416,7 @@ class Cog(metaclass=CogMeta):
                 raise TypeError("Listener function must be a coroutine function.")
             actual.__cog_listener__ = True
             to_assign = name or actual.__name__
+            actual._once = once
             try:
                 actual.__cog_listener_names__.append(to_assign)
             except AttributeError:

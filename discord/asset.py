@@ -213,6 +213,19 @@ class Asset(AssetMixin):
         )
 
     @classmethod
+    def _from_guild_banner(
+        cls, state, guild_id: int, member_id: int, banner: str
+    ) -> Asset:
+        animated = banner.startswith("a_")
+        format = "gif" if animated else "png"
+        return cls(
+            state,
+            url=f"{cls.BASE}/guilds/{guild_id}/users/{member_id}/banners/{banner}.{format}?size=512",
+            key=banner,
+            animated=animated,
+        )
+
+    @classmethod
     def _from_icon(cls, state, object_id: int, icon_hash: str, path: str) -> Asset:
         return cls(
             state,
@@ -277,7 +290,7 @@ class Asset(AssetMixin):
         )
 
     @classmethod
-    def _from_scheduled_event_cover(
+    def _from_scheduled_event_image(
         cls, state, event_id: int, cover_hash: str
     ) -> Asset:
         return cls(

@@ -1036,6 +1036,9 @@ class ForumChannel(_TextChannel):
             for tag in (data.get("available_tags") or [])
         ]
         self.default_sort_order: SortOrder | None = data.get("default_sort_order", None)
+        if self.default_sort_order is not None:
+            self.default_sort_order = try_enum(SortOrder, self.default_sort_order)
+
         reaction_emoji_ctx: dict = data.get("default_reaction_emoji")
         if reaction_emoji_ctx is not None:
             emoji_name = reaction_emoji_ctx.get("emoji_name")
@@ -1218,7 +1221,7 @@ class ForumChannel(_TextChannel):
             A list of stickers to upload. Must be a maximum of 3.
         delete_message_after: :class:`int`
             The time to wait before deleting the thread.
-        nonce: :class:`int`
+        nonce: Union[:class:`str`, :class:`int`]
             The nonce to use for sending this message. If the message was successfully sent,
             then the message will have a nonce with this value.
         allowed_mentions: :class:`~discord.AllowedMentions`
@@ -1339,7 +1342,7 @@ class ForumChannel(_TextChannel):
                     f.close()
 
         ret = Thread(guild=self.guild, state=self._state, data=data)
-        msg = ret.get_partial_message(data["last_message_id"])
+        msg = ret.get_partial_message(int(data["last_message_id"]))
         if view:
             state.store_view(view, msg.id)
 

@@ -34,7 +34,16 @@ import logging
 import sys
 import traceback
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Coroutine, Generator, Literal, Mapping, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Generator,
+    Literal,
+    Mapping,
+    TypeVar,
+)
 
 from .client import Client
 from .cog import CogMixin
@@ -48,13 +57,16 @@ from .commands import (
     UserCommand,
     command,
 )
-from .enums import InteractionType
+from .enums import IntegrationType, InteractionContextType, InteractionType
 from .errors import CheckFailure, DiscordException
 from .interactions import Interaction
 from .shard import AutoShardedClient
 from .types import interactions
 from .user import User
 from .utils import MISSING, async_all, find, get
+
+if TYPE_CHECKING:
+    from .member import Member
 
 CoroFunc = Callable[..., Coroutine[Any, Any, Any]]
 CFT = TypeVar("CFT", bound=CoroFunc)
@@ -108,7 +120,7 @@ class ApplicationCommandMixin(ABC):
         return list(self._application_commands.values())
 
     def add_application_command(self, command: ApplicationCommand) -> None:
-        """Adds a :class:`.ApplicationCommand` into the internal list of commands.
+        """Adds an :class:`.ApplicationCommand` into the internal list of commands.
 
         This is usually not called, instead the :meth:`command` or
         other shortcut decorators are used instead.
@@ -125,6 +137,13 @@ class ApplicationCommandMixin(ABC):
 
         if self._bot.debug_guilds and command.guild_ids is None:
             command.guild_ids = self._bot.debug_guilds
+        if self._bot.default_command_contexts and command.contexts is None:
+            command.contexts = self._bot.default_command_contexts
+        if (
+            self._bot.default_command_integration_types
+            and command.integration_types is None
+        ):
+            command.integration_types = self._bot.default_command_integration_types
 
         for cmd in self.pending_application_commands:
             if cmd == command:
@@ -136,7 +155,7 @@ class ApplicationCommandMixin(ABC):
     def remove_application_command(
         self, command: ApplicationCommand
     ) -> ApplicationCommand | None:
-        """Remove a :class:`.ApplicationCommand` from the internal list
+        """Remove an :class:`.ApplicationCommand` from the internal list
         of commands.
 
         .. versionadded:: 2.0
@@ -149,16 +168,15 @@ class ApplicationCommandMixin(ABC):
         Returns
         -------
         Optional[:class:`.ApplicationCommand`]
-            The command that was removed. If the name is not valid then
+            The command that was removed. If the command has not been added,
             ``None`` is returned instead.
         """
-        if command.id is None:
-            try:
-                index = self._pending_application_commands.index(command)
-            except ValueError:
-                return None
-            return self._pending_application_commands.pop(index)
-        return self._application_commands.pop(command.id, None)
+        if command.id:
+            self._application_commands.pop(command.id, None)
+
+        if command in self._pending_application_commands:
+            self._pending_application_commands.remove(command)
+            return command
 
     @property
     def get_command(self):
@@ -178,7 +196,7 @@ class ApplicationCommandMixin(ABC):
         guild_ids: list[int] | None = None,
         type: type[ApplicationCommand] = ApplicationCommand,
     ) -> ApplicationCommand | None:
-        """Get a :class:`.ApplicationCommand` from the internal list
+        """Get an :class:`.ApplicationCommand` from the internal list
         of commands.
 
         .. versionadded:: 2.0
@@ -271,7 +289,6 @@ class ApplicationCommandMixin(ABC):
             else:
                 as_dict = cmd.to_dict()
                 to_check = {
-                    "dm_permission": None,
                     "nsfw": None,
                     "default_member_permissions": None,
                     "name": None,
@@ -287,6 +304,8 @@ class ApplicationCommandMixin(ABC):
                         "name_localizations",
                         "description_localizations",
                     ],
+                    "contexts": None,
+                    "integration_types": None,
                 }
                 for check, value in to_check.items():
                     if type(to_check[check]) == list:
@@ -680,7 +699,7 @@ class ApplicationCommandMixin(ABC):
         register all commands.
 
         By default, this coroutine is called inside the :func:`.on_connect` event. If you choose to override the
-        :func:`.on_connect` event, then you should invoke this coroutine as well such as the follwing:
+        :func:`.on_connect` event, then you should invoke this coroutine as well such as the following:
 
         .. code-block:: python
 
@@ -1044,7 +1063,7 @@ class ApplicationCommandMixin(ABC):
 
     slash_group = group
 
-    def walk_application_commands(self) -> Generator[ApplicationCommand, None, None]:
+    def walk_application_commands(self) -> Generator[ApplicationCommand]:
         """An iterator that recursively walks through all application commands and subcommands.
 
         Yields
@@ -1157,6 +1176,21 @@ class BotBase(ApplicationCommandMixin, CogMixin, ABC):
         self.auto_sync_commands = options.get("auto_sync_commands", True)
 
         self.debug_guilds = options.pop("debug_guilds", None)
+        self.default_command_contexts = options.pop(
+            "default_command_contexts",
+            {
+                InteractionContextType.guild,
+                InteractionContextType.bot_dm,
+                InteractionContextType.private_channel,
+            },
+        )
+
+        self.default_command_integration_types = options.pop(
+            "default_command_integration_types",
+            {
+                IntegrationType.guild_install,
+            },
+        )
 
         if self.owner_id and self.owner_ids:
             raise TypeError("Both owner_id and owner_ids are set.")
@@ -1167,6 +1201,20 @@ class BotBase(ApplicationCommandMixin, CogMixin, ABC):
             raise TypeError(
                 f"owner_ids must be a collection not {self.owner_ids.__class__!r}"
             )
+        if not isinstance(self.default_command_contexts, collections.abc.Collection):
+            raise TypeError(
+                f"default_command_contexts must be a collection not {self.default_command_contexts.__class__!r}"
+            )
+        if not isinstance(
+            self.default_command_integration_types, collections.abc.Collection
+        ):
+            raise TypeError(
+                f"default_command_integration_types must be a collection not {self.default_command_integration_types.__class__!r}"
+            )
+        self.default_command_contexts = set(self.default_command_contexts)
+        self.default_command_integration_types = set(
+            self.default_command_integration_types
+        )
 
         self._checks = []
         self._check_once = []
@@ -1371,7 +1419,7 @@ class BotBase(ApplicationCommandMixin, CogMixin, ABC):
         self._after_invoke = coro
         return coro
 
-    async def is_owner(self, user: User) -> bool:
+    async def is_owner(self, user: User | Member) -> bool:
         """|coro|
 
         Checks if a :class:`~discord.User` or :class:`~discord.Member` is the owner of
@@ -1386,7 +1434,7 @@ class BotBase(ApplicationCommandMixin, CogMixin, ABC):
 
         Parameters
         ----------
-        user: :class:`.abc.User`
+        user: Union[:class:`.abc.User`, :class:`.member.Member`]
             The user to check for.
 
         Returns
@@ -1447,6 +1495,17 @@ class Bot(BotBase, Client):
         :attr:`.process_application_commands` if the command is not found. Defaults to ``True``.
 
         .. versionadded:: 2.0
+    default_command_contexts: Collection[:class:`InteractionContextType`]
+        The default context types that the bot will use for commands.
+        Defaults to a set containing :attr:`InteractionContextType.guild`, :attr:`InteractionContextType.bot_dm`, and
+        :attr:`InteractionContextType.private_channel`.
+
+        .. versionadded:: 2.6
+    default_command_integration_types: Collection[:class:`IntegrationType`]]
+        The default integration types that the bot will use for commands.
+        Defaults to a set containing :attr:`IntegrationType.guild_install`.
+
+        .. versionadded:: 2.6
     """
 
     @property

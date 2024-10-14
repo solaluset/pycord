@@ -74,8 +74,10 @@ if TYPE_CHECKING:
     from ..guild import Guild
     from ..http import Response
     from ..mentions import AllowedMentions
+    from ..poll import Poll
     from ..state import ConnectionState
     from ..types.message import Message as MessagePayload
+    from ..types.webhook import FollowerWebhook as FollowerWebhookPayload
     from ..types.webhook import Webhook as WebhookPayload
     from ..ui.view import View
 
@@ -401,7 +403,7 @@ class AsyncWebhookAdapter:
         payload: dict[str, Any] | None = None,
         multipart: list[dict[str, Any]] | None = None,
         files: list[File] | None = None,
-    ) -> Response[Message]:
+    ) -> Response[WebhookMessage]:
         params = {}
 
         if thread_id:
@@ -460,7 +462,7 @@ class AsyncWebhookAdapter:
         session: aiohttp.ClientSession,
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
-    ) -> Response[WebhookPayload]:
+    ) -> Response[WebhookPayload | FollowerWebhookPayload]:
         route = Route("GET", "/webhooks/{webhook_id}", webhook_id=webhook_id)
         return self.request(
             route, session=session, proxy=proxy, proxy_auth=proxy_auth, auth_token=token
@@ -474,7 +476,7 @@ class AsyncWebhookAdapter:
         session: aiohttp.ClientSession,
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
-    ) -> Response[WebhookPayload]:
+    ) -> Response[WebhookPayload | FollowerWebhookPayload]:
         route = Route(
             "GET",
             "/webhooks/{webhook_id}/{webhook_token}",
@@ -621,6 +623,7 @@ def handle_message_parameters(
     embed: Embed | None = MISSING,
     embeds: list[Embed] = MISSING,
     view: View | None = MISSING,
+    poll: Poll | None = MISSING,
     applied_tags: list[Snowflake] = MISSING,
     allowed_mentions: AllowedMentions | None = MISSING,
     previous_allowed_mentions: AllowedMentions | None = None,
@@ -641,11 +644,14 @@ def handle_message_parameters(
         payload["embeds"] = [] if embed is None else [embed.to_dict()]
     if content is not MISSING:
         payload["content"] = str(content) if content is not None else None
+    _attachments = []
     if attachments is not MISSING:
-        payload["attachments"] = [a.to_dict() for a in attachments]
+        _attachments = [a.to_dict() for a in attachments]
 
     if view is not MISSING:
         payload["components"] = view.to_components() if view is not None else []
+    if poll is not MISSING:
+        payload["poll"] = poll.to_dict()
     payload["tts"] = tts
     if avatar_url:
         payload["avatar_url"] = str(avatar_url)
@@ -669,32 +675,35 @@ def handle_message_parameters(
         payload["allowed_mentions"] = previous_allowed_mentions.to_dict()
 
     multipart = []
+    multipart_files = []
     if file is not MISSING:
         files = [file]
 
     if files:
-        multipart.append({"name": "payload_json", "value": utils._to_json(payload)})
-        payload = None
-        if len(files) == 1:
-            file = files[0]
-            multipart.append(
+        for index, file in enumerate(files):
+            multipart_files.append(
                 {
-                    "name": "file",
+                    "name": f"files[{index}]",
                     "value": file.fp,
                     "filename": file.filename,
                     "content_type": "application/octet-stream",
                 }
             )
-        else:
-            for index, file in enumerate(files):
-                multipart.append(
-                    {
-                        "name": f"file{index}",
-                        "value": file.fp,
-                        "filename": file.filename,
-                        "content_type": "application/octet-stream",
-                    }
-                )
+            _attachments.append(
+                {
+                    "id": index,
+                    "filename": file.filename,
+                    "description": file.description,
+                }
+            )
+
+    if _attachments:
+        payload["attachments"] = _attachments
+
+    if multipart_files:
+        multipart.append({"name": "payload_json", "value": utils._to_json(payload)})
+        payload = None
+        multipart += multipart_files
 
     return ExecuteWebhookParameters(payload=payload, multipart=multipart, files=files)
 
@@ -985,7 +994,7 @@ class BaseWebhook(Hashable):
 
     def __init__(
         self,
-        data: WebhookPayload,
+        data: WebhookPayload | FollowerWebhookPayload,
         token: str | None = None,
         state: ConnectionState | None = None,
     ):
@@ -995,7 +1004,7 @@ class BaseWebhook(Hashable):
         )
         self._update(data)
 
-    def _update(self, data: WebhookPayload):
+    def _update(self, data: WebhookPayload | FollowerWebhookPayload):
         self.id = int(data["id"])
         self.type = try_enum(WebhookType, int(data["type"]))
         self.channel_id = utils._get_as_snowflake(data, "channel_id")
@@ -1154,7 +1163,7 @@ class Webhook(BaseWebhook):
 
     def __init__(
         self,
-        data: WebhookPayload,
+        data: WebhookPayload | FollowerWebhookPayload,
         session: aiohttp.ClientSession,
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
@@ -1568,6 +1577,7 @@ class Webhook(BaseWebhook):
         embeds: list[Embed] = MISSING,
         allowed_mentions: AllowedMentions = MISSING,
         view: View = MISSING,
+        poll: Poll = MISSING,
         thread: Snowflake = MISSING,
         thread_name: str | None = None,
         applied_tags: list[Snowflake] = MISSING,
@@ -1590,6 +1600,7 @@ class Webhook(BaseWebhook):
         embeds: list[Embed] = MISSING,
         allowed_mentions: AllowedMentions = MISSING,
         view: View = MISSING,
+        poll: Poll = MISSING,
         thread: Snowflake = MISSING,
         thread_name: str | None = None,
         applied_tags: list[Snowflake] = MISSING,
@@ -1611,6 +1622,7 @@ class Webhook(BaseWebhook):
         embeds: list[Embed] = MISSING,
         allowed_mentions: AllowedMentions = MISSING,
         view: View = MISSING,
+        poll: Poll = MISSING,
         thread: Snowflake = MISSING,
         thread_name: str | None = None,
         applied_tags: list[Snowflake] = MISSING,
@@ -1692,6 +1704,10 @@ class Webhook(BaseWebhook):
         delete_after: :class:`float`
             If provided, the number of seconds to wait in the background
             before deleting the message we just sent.
+        poll: :class:`Poll`
+            The poll to send.
+
+            .. versionadded:: 2.6
 
         Returns
         -------
@@ -1751,6 +1767,9 @@ class Webhook(BaseWebhook):
             if ephemeral is True and view.timeout is None:
                 view.timeout = 15 * 60.0
 
+        if poll is None:
+            poll = MISSING
+
         params = handle_message_parameters(
             content=content,
             username=username,
@@ -1762,6 +1781,7 @@ class Webhook(BaseWebhook):
             embeds=embeds,
             ephemeral=ephemeral,
             view=view,
+            poll=poll,
             applied_tags=applied_tags,
             allowed_mentions=allowed_mentions,
             previous_allowed_mentions=previous_mentions,
