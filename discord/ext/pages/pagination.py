@@ -1025,7 +1025,7 @@ class Paginator(discord.ui.View):
                 )
             ctx = target
 
-        self.message = await ctx.send(
+        self.message = await ctx.respond(
             content=page_content.content,
             embeds=page_content.embeds,
             files=page_content.files,
