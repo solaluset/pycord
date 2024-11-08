@@ -532,14 +532,14 @@ class VoiceClient(VoiceProtocol):
             if self.socket:
                 self.socket.close()
 
-    async def move_to(self, channel: abc.Snowflake) -> None:
+    async def move_to(self, channel: abc.Connectable) -> None:
         """|coro|
 
         Moves you to a different voice channel.
 
         Parameters
         ----------
-        channel: :class:`abc.Snowflake`
+        channel: :class:`abc.Connectable`
             The channel to move to. Must be a voice channel.
         """
         await self.channel.guild.change_voice_state(channel=channel)
@@ -630,8 +630,7 @@ class VoiceClient(VoiceProtocol):
         *,
         after: Callable[[Exception | None], Any] | None = None,
         wait_finish: Literal[False] = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def play(
@@ -640,8 +639,7 @@ class VoiceClient(VoiceProtocol):
         *,
         after: Callable[[Exception | None], Any] | None = None,
         wait_finish: Literal[True],
-    ) -> asyncio.Future:
-        ...
+    ) -> asyncio.Future: ...
 
     def play(
         self,
