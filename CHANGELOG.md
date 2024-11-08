@@ -10,6 +10,213 @@ possible (see our [Version Guarantees] for more info).
 
 These changes are available on the `master` branch, but have not yet been released.
 
+⚠️ **This version removes support for Python 3.8.** ⚠️
+
+### Added
+
+- Added `Guild.fetch_role` method.
+  ([#2528](https://github.com/Pycord-Development/pycord/pull/2528))
+- Added the following `AppInfo` attributes: `approximate_guild_count`,
+  `approximate_user_install_count`, `custom_install_url`, `install_params`,
+  `interactions_endpoint_url`, `redirect_uris`, `role_connections_verification_url`, and
+  `tags`. ([#2520](https://github.com/Pycord-Development/pycord/pull/2520))
+- Added `Member.guild_banner` and `Member.display_banner` properties.
+  ([#2556](https://github.com/Pycord-Development/pycord/pull/2556))
+- Added support for Application Emojis.
+  ([#2501](https://github.com/Pycord-Development/pycord/pull/2501))
+- Added `cache_app_emojis` parameter to `Client`.
+  ([#2501](https://github.com/Pycord-Development/pycord/pull/2501))
+- Added `elapsed` method to `VoiceClient`.
+  ([#2587](https://github.com/Pycord-Development/pycord/pull/2587/))
+- Added optional `filter` parameter to `utils.basic_autocomplete()`.
+  ([#2590](https://github.com/Pycord-Development/pycord/pull/2590))
+- Added missing `with_counts` parameter to `fetch_guilds` method.
+  ([#2615](https://github.com/Pycord-Development/pycord/pull/2615))
+- Added missing permissions: `Permissions.use_soundboard`,
+  `Permissions.use_external_sounds` and
+  `Permissions.view_creator_monetization_analytics`.
+  ([#2620](https://github.com/Pycord-Development/pycord/pull/2620))
+
+### Fixed
+
+- Fixed `Enum` options not setting the correct type when only one choice is available.
+  ([#2577](https://github.com/Pycord-Development/pycord/pull/2577))
+- Fixed `codec` option for `FFmpegOpusAudio` class to make it in line with
+  documentation. ([#2581](https://github.com/Pycord-Development/pycord/pull/2581))
+- Fixed a possible bug where audio would play too fast at the beginning of audio files.
+  ([#2584](https://github.com/Pycord-Development/pycord/pull/2584))
+- Fixed paginator not responding when using `Paginator.edit()` with default parameters.
+  ([#2594](https://github.com/Pycord-Development/pycord/pull/2594))
+- Fixed the `is_owner()` `user` type hint: `User` -> `User | Member`.
+  ([#2593](https://github.com/Pycord-Development/pycord/pull/2593))
+- Fixed `Guild.create_test_entitlement()` and `User.create_test_entitlement()` using the
+  guild/user ID instead of the application ID.
+  ([#2595](https://github.com/Pycord-Development/pycord/pull/2595))
+- Fixed `BucketType.category` cooldown commands not functioning correctly in private
+  channels. ([#2603](https://github.com/Pycord-Development/pycord/pull/2603))
+- Fixed `SlashCommand`'s `ctx` parameter couldn't be `Union` type.
+  ([#2611](https://github.com/Pycord-Development/pycord/pull/2611))
+- Fixed `TypeError` when passing `skus` parameter in `Client.entitlements()`.
+  ([#2627](https://github.com/Pycord-Development/pycord/issues/2627))
+- Fixed `AttributeError` when sending polls with `PartialWebook`.
+  ([#2624](https://github.com/Pycord-Development/pycord/pull/2624))
+
+### Changed
+
+- Renamed `cover` property of `ScheduledEvent` and `cover` argument of
+  `ScheduledEvent.edit` to `image`.
+  ([#2496](https://github.com/Pycord-Development/pycord/pull/2496))
+- ⚠️ **Removed support for Python 3.8.**
+  ([#2521](https://github.com/Pycord-Development/pycord/pull/2521))
+- `Emoji` has been renamed to `GuildEmoji`.
+  ([#2501](https://github.com/Pycord-Development/pycord/pull/2501))
+- Replaced audioop (deprecated module) implementation of `PCMVolumeTransformer.read`
+  method with a pure Python equivalent.
+  ([#2176](https://github.com/Pycord-Development/pycord/pull/2176))
+
+### Deprecated
+
+- Deprecated `AppInfo.summary` in favor of `AppInfo.description`.
+  ([#2520](https://github.com/Pycord-Development/pycord/pull/2520))
+- Deprecated `Emoji` in favor of `GuildEmoji`.
+  ([#2501](https://github.com/Pycord-Development/pycord/pull/2501))
+
+## [2.6.1] - 2024-09-15
+
+### Fixed
+
+- Fixed premature garbage collection of tasks.
+  ([#2510](https://github.com/Pycord-Development/pycord/pull/2510))
+- Fixed `EntitlementIterator` type hints and behavior with `limit > 100`.
+  ([#2555](https://github.com/Pycord-Development/pycord/pull/2555))
+- Fixed missing `stacklevel` parameter in `warn_deprecated` function call inside
+  `@utils.deprecated`. ([#2500](https://github.com/Pycord-Development/pycord/pull/2500))
+- Fixed the type hint in `ConnectionState._polls` to reflect actual behavior, changing
+  it from `Guild` to `Poll`.
+  ([#2500](https://github.com/Pycord-Development/pycord/pull/2500))
+- Fixed missing `__slots__` attributes in `RawReactionClearEmojiEvent` and
+  `RawMessagePollVoteEvent`.
+  ([#2500](https://github.com/Pycord-Development/pycord/pull/2500))
+- Fixed the type of `ForumChannel.default_sort_order`, changing it from `int` to
+  `SortOrder`. ([#2500](https://github.com/Pycord-Development/pycord/pull/2500))
+- Fixed `PartialMessage` causing errors when created from `PartialMessageable`.
+  ([#2568](https://github.com/Pycord-Development/pycord/pull/2500))
+- Fixed the `guild` attribute of `Member`s received from a `UserCommand` being `None`.
+  ([#2573](https://github.com/Pycord-Development/pycord/pull/2573))
+- Fixed `Webhook.send`, which did not include attachment data.
+  ([#2513](https://github.com/Pycord-Development/pycord/pull/2513))
+- Fixed inverted type hints in `CheckAnyFailure`.
+  ([#2502](https://github.com/Pycord-Development/pycord/pull/2502))
+
+## [2.6.0] - 2024-07-09
+
+### Added
+
+- Added `banner` parameter to `ClientUser.edit`.
+  ([#2396](https://github.com/Pycord-Development/pycord/pull/2396))
+- Added `user` argument to `Paginator.edit`.
+  ([#2390](https://github.com/Pycord-Development/pycord/pull/2390))
+- Added `bridge_option` decorator. Required for `bridge.Bot` in 2.7.
+  ([#2417](https://github.com/Pycord-Development/pycord/pull/2417))
+- Added `Guild.search_members`.
+  ([#2418](https://github.com/Pycord-Development/pycord/pull/2418))
+- Added bulk banning up to 200 users through `Guild.bulk_ban`.
+  ([#2421](https://github.com/Pycord-Development/pycord/pull/2421))
+- Added `member` data to the `raw_reaction_remove` event.
+  ([#2412](https://github.com/Pycord-Development/pycord/pull/2412))
+- Added `Poll` and all related features.
+  ([#2408](https://github.com/Pycord-Development/pycord/pull/2408))
+- Added `stacklevel` param to `utils.warn_deprecated` and `utils.deprecated`.
+  ([#2450](https://github.com/Pycord-Development/pycord/pull/2450))
+- Added support for user-installable applications.
+  ([#2409](https://github.com/Pycord-Development/pycord/pull/2409))
+- Added support for one-time purchases for Discord monetization.
+  ([#2438](https://github.com/Pycord-Development/pycord/pull/2438))
+- Added `Attachment.title`.
+  ([#2486](https://github.com/Pycord-Development/pycord/pull/2486))
+- Added `MemberFlags`. ([#2489](https://github.com/Pycord-Development/pycord/pull/2489))
+- Added `bypass_verification` parameter to `Member.edit`.
+  ([#2489](https://github.com/Pycord-Development/pycord/pull/2489))
+- Added `RoleFlags`. ([#2487](https://github.com/Pycord-Development/pycord/pull/2487))
+- Added `MessageCall` information.
+  ([#2488](https://github.com/Pycord-Development/pycord/pull/2488))
+
+### Fixed
+
+- Fixed the type-hinting of `Member.move_to` and `Member.edit` to reflect actual
+  behavior. ([#2386](https://github.com/Pycord-Development/pycord/pull/2386))
+- Fixed a deprecation warning from being displayed when running `python -m discord -v`
+  by replacing the deprecated module.
+  ([#2392](https://github.com/Pycord-Development/pycord/pull/2392))
+- Fixed `Paginator.edit` to no longer set user to the bot.
+  ([#2390](https://github.com/Pycord-Development/pycord/pull/2390))
+- Fixed `NameError` in some instances of `Interaction`.
+  ([#2402](https://github.com/Pycord-Development/pycord/pull/2402))
+- Fixed interactions being ignored due to `PartialMessage.id` being of type `str`.
+  ([#2406](https://github.com/Pycord-Development/pycord/pull/2406))
+- Fixed the type-hinting of `ScheduledEvent.subscribers` to reflect actual behavior.
+  ([#2400](https://github.com/Pycord-Development/pycord/pull/2400))
+- Fixed `ScheduledEvent.subscribers` behavior with `limit=None`.
+  ([#2407](https://github.com/Pycord-Development/pycord/pull/2407))
+- Fixed invalid data being passed to `Interaction._guild` in certain cases.
+  ([#2411](https://github.com/Pycord-Development/pycord/pull/2411))
+- Fixed option type hints being ignored when using `parameter_name`.
+  ([#2417](https://github.com/Pycord-Development/pycord/pull/2417))
+- Fixed parameter `embed=None` causing `AttributeError` on `PartialMessage.edit`.
+  ([#2446](https://github.com/Pycord-Development/pycord/pull/2446))
+- Fixed paginator to revert state if a page update callback fails.
+  ([#2448](https://github.com/Pycord-Development/pycord/pull/2448))
+- Fixed missing `application_id` in `Entitlement.delete`.
+  ([#2458](https://github.com/Pycord-Development/pycord/pull/2458))
+- Fixed issues with enums as `Option` types with long descriptions or too many values.
+  ([#2463](https://github.com/Pycord-Development/pycord/pull/2463))
+- Fixed many inaccurate type hints throughout the library.
+  ([#2457](https://github.com/Pycord-Development/pycord/pull/2457))
+- Fixed `AttributeError` due to `discord.Option` being initialised with `input_type` set
+  to `None`. ([#2464](https://github.com/Pycord-Development/pycord/pull/2464))
+- Fixed `remove_application_command` causing issues while reloading extensions.
+  ([#2480](https://github.com/Pycord-Development/pycord/pull/2480))
+- Fixed outdated logic for filtering and sorting audit log entries.
+  ([#2371](https://github.com/Pycord-Development/pycord/pull/2371))
+- Further fixed logic when fetching audit logs.
+  ([#2492](https://github.com/Pycord-Development/pycord/pull/2492))
+
+### Changed
+
+- Changed the type of `Guild.bitrate_limit` to `int`.
+  ([#2387](https://github.com/Pycord-Development/pycord/pull/2387))
+- HTTP requests that fail with a 503 status are now retried.
+  ([#2395](https://github.com/Pycord-Development/pycord/pull/2395))
+- `option` decorator now accepts `input_type`.
+  ([#2417](https://github.com/Pycord-Development/pycord/pull/2417))
+- `Option` may be used instead of `BridgeOption` until 2.7.
+  ([#2417](https://github.com/Pycord-Development/pycord/pull/2417))
+- `Guild.query_members` now accepts `limit=None` to retrieve all members.
+  ([#2419](https://github.com/Pycord-Development/pycord/pull/2419))
+- `ApplicationCommand.guild_only` is now deprecated in favor of
+  `ApplicationCommand.contexts`.
+  ([#2409](https://github.com/Pycord-Development/pycord/pull/2409))
+- `Message.interaction` is now deprecated in favor of `Message.interaction_metadata`.
+  ([#2409](https://github.com/Pycord-Development/pycord/pull/2409))
+- Replaced `Client.fetch_entitlements` with `Client.entitlements`, which returns an
+  `EntitlementIterator`.
+  ([#2490](https://github.com/Pycord-Development/pycord/pull/2490))
+- Changed the error message that appears when attempting to add a subcommand group to a
+  subcommand group. ([#2275](https://github.com/Pycord-Development/pycord/pull/2275))
+
+### Removed
+
+- Removed the `delete_message_days` parameter from ban methods. Please use
+  `delete_message_seconds` instead.
+  ([#2421](https://github.com/Pycord-Development/pycord/pull/2421))
+- Removed the `oldest_first` parameter from `Guild.audit_logs` in favor of the `before`
+  and `after` parameters.
+  ([#2371](https://github.com/Pycord-Development/pycord/pull/2371))
+- Removed the `vanity_code` parameter from `Guild.edit`.
+  ([#2491](https://github.com/Pycord-Development/pycord/pull/2491))
+
+## [2.5.0] - 2024-03-02
+
 ### Added
 
 - Added method to start bot via async context manager.
@@ -93,6 +300,12 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2342](https://github.com/Pycord-Development/pycord/pull/2342))
 - Added `invitable` and `slowmode_delay` to `Thread` creation methods.
   ([#2350](https://github.com/Pycord-Development/pycord/pull/2350))
+- Added support for voice channel statuses.
+  ([#2368](https://github.com/Pycord-Development/pycord/pull/2368))
+- Added `enforce_nonce` parameter for message sending.
+  ([#2370](https://github.com/Pycord-Development/pycord/pull/2370))
+- Added audit log support for voice channel status.
+  ([#2373](https://github.com/Pycord-Development/pycord/pull/2373))
 
 ### Changed
 
@@ -181,7 +394,7 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2145](https://github.com/Pycord-Development/pycord/pull/2145))
 - Fixed `Thread.applied_tags` not being updated.
   ([#2146](https://github.com/Pycord-Development/pycord/pull/2146))
-- Fixed type hinting of `author` property of `ApplicationContext` to include
+- Fixed type-hinting of `author` property of `ApplicationContext` to include
   type-hinting of `User` or `Member`.
   ([#2148](https://github.com/Pycord-Development/pycord/pull/2148))
 - Fixed missing `delete_after` parameter in overload type-hinting for `Webhook.send()`.
@@ -192,7 +405,6 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2185](https://github.com/Pycord-Development/pycord/pull/2185))
 - Fixed inaccurate `Union` type hint of `values` argument of `basic_autocomplete` to
   include `Iterable[OptionChoice]`.
-  ([#2164](https://github.com/Pycord-Development/pycord/pull/2164))
 - Fixed initial message inside of the create thread payload sending legacy beta payload.
   ([#2191](https://github.com/Pycord-Development/pycord/pull/2191))
 - Fixed a misplaced payload object inside of the thread creation payload.
@@ -239,6 +451,10 @@ These changes are available on the `master` branch, but have not yet been releas
   ([#2345](https://github.com/Pycord-Development/pycord/pull/2345))
 - Fixed `Thread.me` being out of date and added the thread owner to `Thread.members` on
   creation. ([#1296](https://github.com/Pycord-Development/pycord/issues/1296))
+- Fixed keyword argument wildcard of `bridge.has_permissions` having the wrong type
+  hint. ([#2364](https://github.com/Pycord-Development/pycord/pull/2364))
+- Fixed enum to support stringified annotations.
+  ([#2367](https://github.com/Pycord-Development/pycord/pull/2367))
 
 ## [2.4.1] - 2023-03-20
 
@@ -518,7 +734,7 @@ These changes are available on the `master` branch, but have not yet been releas
 
 - Fix `VoiceChannel`/`CategoryChannel` data being invalidated on `Option._invoke`.
   ([#1490](https://github.com/Pycord-Development/pycord/pull/1490))
-- Fix type issues in options.py
+- Fix type issues in `options.py`
   ([#1473](https://github.com/Pycord-Development/pycord/pull/1473))
 - Fix KeyError on AutoModActionExecution when the bot lacks the Message Content Intent.
   ([#1521](https://github.com/Pycord-Development/pycord/pull/1521))
@@ -768,7 +984,9 @@ These changes are available on the `master` branch, but have not yet been releas
 - Fix py3.10 UnionType checks issue.
   ([#1240](https://github.com/Pycord-Development/pycord/pull/1240))
 
-[unreleased]: https://github.com/Pycord-Development/pycord/compare/v2.4.1...HEAD
+[unreleased]: https://github.com/Pycord-Development/pycord/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/Pycord-Development/pycord/compare/v2.5.0...v2.6.0
+[2.5.0]: https://github.com/Pycord-Development/pycord/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/Pycord-Development/pycord/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/Pycord-Development/pycord/compare/v2.3.3...v2.4.0
 [2.3.3]: https://github.com/Pycord-Development/pycord/compare/v2.3.2...v2.3.3

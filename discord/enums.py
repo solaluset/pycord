@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import types
@@ -73,6 +74,8 @@ __all__ = (
     "SKUType",
     "EntitlementType",
     "EntitlementOwnerType",
+    "IntegrationType",
+    "InteractionContextType",
 )
 
 
@@ -438,6 +441,8 @@ class AuditLogAction(Enum):
     onboarding_update = 167
     server_guide_create = 190
     server_guide_update = 191
+    voice_channel_status_update = 192
+    voice_channel_status_delete = 193
 
     @property
     def category(self) -> AuditLogActionCategory | None:
@@ -505,6 +510,8 @@ class AuditLogAction(Enum):
             AuditLogAction.onboarding_update: AuditLogActionCategory.update,
             AuditLogAction.server_guide_create: AuditLogActionCategory.create,
             AuditLogAction.server_guide_update: AuditLogActionCategory.update,
+            AuditLogAction.voice_channel_status_update: AuditLogActionCategory.update,
+            AuditLogAction.voice_channel_status_delete: AuditLogActionCategory.delete,
         }
         return lookup[self]
 
@@ -551,6 +558,8 @@ class AuditLogAction(Enum):
             return "onboarding"
         elif v < 192:
             return "server_guide"
+        elif v < 194:
+            return "voice_channel_status"
 
 
 class UserFlags(Enum):
@@ -715,6 +724,7 @@ class ButtonStyle(Enum):
     success = 3
     danger = 4
     link = 5
+    premium = 6
 
     # Aliases
     blurple = 1
@@ -799,9 +809,13 @@ class SlashCommandOptionType(Enum):
             # Type checking fails for this case, so ignore it.
             return cls.from_datatype(datatype.__args__)  # type: ignore
 
-        if datatype.__name__ in ["Member", "User"]:
+        if isinstance(datatype, str):
+            datatype_name = datatype
+        else:
+            datatype_name = datatype.__name__
+        if datatype_name in ["Member", "User"]:
             return cls.user
-        if datatype.__name__ in [
+        if datatype_name in [
             "GuildChannel",
             "TextChannel",
             "VoiceChannel",
@@ -813,14 +827,14 @@ class SlashCommandOptionType(Enum):
             "DMChannel",
         ]:
             return cls.channel
-        if datatype.__name__ == "Role":
+        if datatype_name == "Role":
             return cls.role
-        if datatype.__name__ == "Attachment":
+        if datatype_name == "Attachment":
             return cls.attachment
-        if datatype.__name__ == "Mentionable":
+        if datatype_name == "Mentionable":
             return cls.mentionable
 
-        if issubclass(datatype, str):
+        if isinstance(datatype, str) or issubclass(datatype, str):
             return cls.string
         if issubclass(datatype, bool):
             return cls.boolean
@@ -992,6 +1006,8 @@ class ReactionType(Enum):
 class SKUType(Enum):
     """The SKU type"""
 
+    durable = 2
+    consumable = 3
     subscription = 5
     subscription_group = 6
 
@@ -999,6 +1015,13 @@ class SKUType(Enum):
 class EntitlementType(Enum):
     """The entitlement type"""
 
+    purchase = 1
+    premium_subscription = 2
+    developer_gift = 3
+    test_mode_purchase = 4
+    free_purchase = 5
+    user_gift = 6
+    premium_purchase = 7
     application_subscription = 8
 
 
@@ -1007,6 +1030,27 @@ class EntitlementOwnerType(Enum):
 
     guild = 1
     user = 2
+
+
+class IntegrationType(Enum):
+    """The application's integration type"""
+
+    guild_install = 0
+    user_install = 1
+
+
+class InteractionContextType(Enum):
+    """The interaction's context type"""
+
+    guild = 0
+    bot_dm = 1
+    private_channel = 2
+
+
+class PollLayoutType(Enum):
+    """The poll's layout type."""
+
+    default = 1
 
 
 T = TypeVar("T")

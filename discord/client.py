@@ -41,7 +41,7 @@ from .appinfo import AppInfo, PartialAppInfo
 from .application_role_connection import ApplicationRoleConnectionMetadata
 from .backoff import ExponentialBackoff
 from .channel import PartialMessageable, _threaded_channel_factory
-from .emoji import Emoji
+from .emoji import AppEmoji, GuildEmoji
 from .enums import ChannelType, Status
 from .errors import *
 from .flags import ApplicationFlags, Intents
@@ -49,7 +49,7 @@ from .gateway import *
 from .guild import Guild
 from .http import HTTPClient
 from .invite import Invite
-from .iterators import GuildIterator
+from .iterators import EntitlementIterator, GuildIterator
 from .mentions import AllowedMentions
 from .monetization import SKU, Entitlement
 from .object import Object
@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from .channel import DMChannel
     from .member import Member
     from .message import Message
+    from .poll import Poll
     from .voice_client import VoiceProtocol
 
 __all__ = ("Client",)
@@ -198,6 +199,16 @@ class Client:
         To enable these events, this must be set to ``True``. Defaults to ``False``.
 
         .. versionadded:: 2.0
+    cache_app_emojis: :class:`bool`
+        Whether to automatically fetch and cache the application's emojis on startup and when fetching. Defaults to ``False``.
+
+        .. warning::
+
+            There are no events related to application emojis - if any are created/deleted on the
+            Developer Dashboard while the client is running, the cache will not be updated until you manually
+            run :func:`fetch_emojis`.
+
+        .. versionadded:: 2.7
 
     Attributes
     -----------
@@ -218,9 +229,9 @@ class Client:
         self.loop: asyncio.AbstractEventLoop = (
             asyncio.get_event_loop() if loop is None else loop
         )
-        self._listeners: dict[
-            str, list[tuple[asyncio.Future, Callable[..., bool]]]
-        ] = {}
+        self._listeners: dict[str, list[tuple[asyncio.Future, Callable[..., bool]]]] = (
+            {}
+        )
         self.shard_id: int | None = options.get("shard_id")
         self.shard_count: int | None = options.get("shard_count")
 
@@ -254,6 +265,9 @@ class Client:
         if VoiceClient.warn_nacl:
             VoiceClient.warn_nacl = False
             _log.warning("PyNaCl is not installed, voice will NOT be supported")
+
+        # Used to hard-reference tasks so they don't get garbage collected (discarded with done_callbacks)
+        self._tasks = set()
 
     async def __aenter__(self) -> Client:
         loop = asyncio.get_running_loop()
@@ -326,9 +340,29 @@ class Client:
         return self._connection.guilds
 
     @property
-    def emojis(self) -> list[Emoji]:
-        """The emojis that the connected client has."""
+    def emojis(self) -> list[GuildEmoji | AppEmoji]:
+        """The emojis that the connected client has.
+
+        .. note::
+
+            This only includes the application's emojis if `cache_app_emojis` is ``True``.
+        """
         return self._connection.emojis
+
+    @property
+    def guild_emojis(self) -> list[GuildEmoji]:
+        """The :class:`~discord.GuildEmoji` that the connected client has."""
+        return [e for e in self.emojis if isinstance(e, GuildEmoji)]
+
+    @property
+    def app_emojis(self) -> list[AppEmoji]:
+        """The :class:`~discord.AppEmoji` that the connected client has.
+
+        .. note::
+
+            This is only available if `cache_app_emojis` is ``True``.
+        """
+        return [e for e in self.emojis if isinstance(e, AppEmoji)]
 
     @property
     def stickers(self) -> list[GuildSticker]:
@@ -337,6 +371,14 @@ class Client:
         .. versionadded:: 2.0
         """
         return self._connection.stickers
+
+    @property
+    def polls(self) -> list[Poll]:
+        """The polls that the connected client has.
+
+        .. versionadded:: 2.6
+        """
+        return self._connection.polls
 
     @property
     def cached_messages(self) -> Sequence[Message]:
@@ -414,8 +456,12 @@ class Client:
         **kwargs: Any,
     ) -> asyncio.Task:
         wrapped = self._run_event(coro, event_name, *args, **kwargs)
-        # Schedules the task
-        return asyncio.create_task(wrapped, name=f"pycord: {event_name}")
+
+        # Schedule task and store in set to avoid task garbage collection
+        task = asyncio.create_task(wrapped, name=f"pycord: {event_name}")
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
 
     def dispatch(self, event: str, *args: Any, **kwargs: Any) -> None:
         _log.debug("Dispatching event %s", event)
@@ -668,6 +714,7 @@ class Client:
         if self._closed:
             return
 
+        await self.http.close()
         self._closed = True
 
         for voice in self.voice_clients:
@@ -680,7 +727,6 @@ class Client:
         if self.ws is not None and self.ws.open:
             await self.ws.close(code=1000)
 
-        await self.http.close()
         self._ready.clear()
 
     def clear(self) -> None:
@@ -978,7 +1024,7 @@ class Client:
         """
         return self._connection.get_user(id)
 
-    def get_emoji(self, id: int, /) -> Emoji | None:
+    def get_emoji(self, id: int, /) -> GuildEmoji | AppEmoji | None:
         """Returns an emoji with the given ID.
 
         Parameters
@@ -988,7 +1034,7 @@ class Client:
 
         Returns
         -------
-        Optional[:class:`.Emoji`]
+        Optional[:class:`.GuildEmoji` | :class:`.AppEmoji`]
             The custom emoji or ``None`` if not found.
         """
         return self._connection.get_emoji(id)
@@ -1010,7 +1056,22 @@ class Client:
         """
         return self._connection.get_sticker(id)
 
-    def get_all_channels(self) -> Generator[GuildChannel, None, None]:
+    def get_poll(self, id: int, /) -> Poll | None:
+        """Returns a poll attached to the given message ID.
+
+        Parameters
+        ----------
+        id: :class:`int`
+            The message ID of the poll to search for.
+
+        Returns
+        -------
+        Optional[:class:`.Poll`]
+            The poll or ``None`` if not found.
+        """
+        return self._connection.get_poll(id)
+
+    def get_all_channels(self) -> Generator[GuildChannel]:
         """A generator that retrieves every :class:`.abc.GuildChannel` the client can 'access'.
 
         This is equivalent to: ::
@@ -1034,7 +1095,7 @@ class Client:
         for guild in self.guilds:
             yield from guild.channels
 
-    def get_all_members(self) -> Generator[Member, None, None]:
+    def get_all_members(self) -> Generator[Member]:
         """Returns a generator with every :class:`.Member` the client can see.
 
         This is equivalent to: ::
@@ -1401,6 +1462,7 @@ class Client:
         limit: int | None = 100,
         before: SnowflakeTime = None,
         after: SnowflakeTime = None,
+        with_counts: bool = True,
     ) -> GuildIterator:
         """Retrieves an :class:`.AsyncIterator` that enables receiving your guilds.
 
@@ -1428,6 +1490,11 @@ class Client:
             Retrieve guilds after this date or object.
             If a datetime is provided, it is recommended to use a UTC aware datetime.
             If the datetime is naive, it is assumed to be local time.
+        with_counts: :class:`bool`
+            Whether to include member count information in guilds. This fills the
+            :attr:`.Guild.approximate_member_count` and :attr:`.Guild.approximate_presence_count`
+            fields.
+            Defaults to ``True``.
 
         Yields
         ------
@@ -1454,7 +1521,9 @@ class Client:
 
         All parameters are optional.
         """
-        return GuildIterator(self, limit=limit, before=before, after=after)
+        return GuildIterator(
+            self, limit=limit, before=before, after=after, with_counts=with_counts
+        )
 
     async def fetch_template(self, code: Template | str) -> Template:
         """|coro|
@@ -2019,17 +2088,192 @@ class Client:
         data = await self._connection.http.list_skus(self.application_id)
         return [SKU(data=s) for s in data]
 
-    async def fetch_entitlements(self) -> list[Entitlement]:
+    def entitlements(
+        self,
+        user: Snowflake | None = None,
+        skus: list[Snowflake] | None = None,
+        before: SnowflakeTime | None = None,
+        after: SnowflakeTime | None = None,
+        limit: int | None = 100,
+        guild: Snowflake | None = None,
+        exclude_ended: bool = False,
+    ) -> EntitlementIterator:
+        """Returns an :class:`.AsyncIterator` that enables fetching the application's entitlements.
+
+        .. versionadded:: 2.6
+
+        Parameters
+        ----------
+        user: :class:`.abc.Snowflake` | None
+            Limit the fetched entitlements to entitlements owned by this user.
+        skus: list[:class:`.abc.Snowflake`] | None
+            Limit the fetched entitlements to entitlements that are for these SKUs.
+        before: :class:`.abc.Snowflake` | :class:`datetime.datetime` | None
+            Retrieves guilds before this date or object.
+            If a datetime is provided, it is recommended to use a UTC-aware datetime.
+            If the datetime is naive, it is assumed to be local time.
+        after: :class:`.abc.Snowflake` | :class:`datetime.datetime` | None
+            Retrieve guilds after this date or object.
+            If a datetime is provided, it is recommended to use a UTC-aware datetime.
+            If the datetime is naive, it is assumed to be local time.
+        limit: Optional[:class:`int`]
+            The number of entitlements to retrieve.
+            If ``None``, retrieves every entitlement, which may be slow.
+            Defaults to ``100``.
+        guild: :class:`.abc.Snowflake` | None
+            Limit the fetched entitlements to entitlements owned by this guild.
+        exclude_ended: :class:`bool`
+            Whether to limit the fetched entitlements to those that have not ended.
+            Defaults to ``False``.
+
+        Yields
+        ------
+        :class:`.Entitlement`
+            The application's entitlements.
+
+        Raises
+        ------
+        :exc:`HTTPException`
+            Retrieving the entitlements failed.
+
+        Examples
+        --------
+
+        Usage ::
+
+            async for entitlement in client.entitlements():
+                print(entitlement.user_id)
+
+        Flattening into a list ::
+
+            entitlements = await user.entitlements().flatten()
+
+        All parameters are optional.
+        """
+        return EntitlementIterator(
+            self._connection,
+            user_id=user.id if user else None,
+            sku_ids=[sku.id for sku in skus] if skus else None,
+            before=before,
+            after=after,
+            limit=limit,
+            guild_id=guild.id if guild else None,
+            exclude_ended=exclude_ended,
+        )
+
+    @property
+    def store_url(self) -> str:
+        """:class:`str`: The URL that leads to the application's store page for monetization.
+
+        .. versionadded:: 2.6
+        """
+        return f"https://discord.com/application-directory/{self.application_id}/store"
+
+    async def fetch_emojis(self) -> list[AppEmoji]:
+        r"""|coro|
+
+        Retrieves all custom :class:`AppEmoji`\s from the application.
+
+        Raises
+        ---------
+        HTTPException
+            An error occurred fetching the emojis.
+
+        Returns
+        --------
+        List[:class:`AppEmoji`]
+            The retrieved emojis.
+        """
+        data = await self._connection.http.get_all_application_emojis(
+            self.application_id
+        )
+        return [
+            self._connection.maybe_store_app_emoji(self.application_id, d)
+            for d in data["items"]
+        ]
+
+    async def fetch_emoji(self, emoji_id: int, /) -> AppEmoji:
         """|coro|
 
-        Fetches the bot's entitlements.
+        Retrieves a custom :class:`AppEmoji` from the application.
 
-        .. versionadded:: 2.5
+        Parameters
+        ----------
+        emoji_id: :class:`int`
+            The emoji's ID.
 
         Returns
         -------
-        List[:class:`.Entitlement`]
-            The bot's entitlements.
+        :class:`AppEmoji`
+            The retrieved emoji.
+
+        Raises
+        ------
+        NotFound
+            The emoji requested could not be found.
+        HTTPException
+            An error occurred fetching the emoji.
         """
-        data = await self._connection.http.list_entitlements(self.application_id)
-        return [Entitlement(data=e, state=self._connection) for e in data]
+        data = await self._connection.http.get_application_emoji(
+            self.application_id, emoji_id
+        )
+        return self._connection.maybe_store_app_emoji(self.application_id, data)
+
+    async def create_emoji(
+        self,
+        *,
+        name: str,
+        image: bytes,
+    ) -> AppEmoji:
+        r"""|coro|
+
+        Creates a custom :class:`AppEmoji` for the application.
+
+        There is currently a limit of 2000 emojis per application.
+
+        Parameters
+        -----------
+        name: :class:`str`
+            The emoji name. Must be at least 2 characters.
+        image: :class:`bytes`
+            The :term:`py:bytes-like object` representing the image data to use.
+            Only JPG, PNG and GIF images are supported.
+
+        Raises
+        -------
+        HTTPException
+            An error occurred creating an emoji.
+
+        Returns
+        --------
+        :class:`AppEmoji`
+            The created emoji.
+        """
+
+        img = utils._bytes_to_base64_data(image)
+        data = await self._connection.http.create_application_emoji(
+            self.application_id, name, img
+        )
+        return self._connection.maybe_store_app_emoji(self.application_id, data)
+
+    async def delete_emoji(self, emoji: Snowflake) -> None:
+        """|coro|
+
+        Deletes the custom :class:`AppEmoji` from the application.
+
+        Parameters
+        ----------
+        emoji: :class:`abc.Snowflake`
+            The emoji you are deleting.
+
+        Raises
+        ------
+        HTTPException
+            An error occurred deleting the emoji.
+        """
+
+        await self._connection.http.delete_application_emoji(
+            self.application_id, emoji.id
+        )
+        if self._connection.cache_app_emojis and self._connection.get_emoji(emoji.id):
+            self._connection.remove_emoji(emoji)

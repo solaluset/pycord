@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -586,7 +587,16 @@ class DiscordWebSocket:
 
     def _can_handle_close(self):
         code = self._close_code or self.socket.close_code
-        return code not in (1000, 4004, 4010, 4011, 4012, 4013, 4014)
+        is_improper_close = self._close_code is None and self.socket.close_code == 1000
+        return is_improper_close or code not in (
+            1000,
+            4004,
+            4010,
+            4011,
+            4012,
+            4013,
+            4014,
+        )
 
     async def poll_event(self):
         """Polls for a DISPATCH event and handles the general gateway loop.
@@ -602,13 +612,11 @@ class DiscordWebSocket:
                 await self.received_message(msg.data)
             elif msg.type is aiohttp.WSMsgType.BINARY:
                 await self.received_message(msg.data)
-            elif msg.type is aiohttp.WSMsgType.ERROR:
-                _log.debug("Received %s", msg)
-                raise msg.data
             elif msg.type in (
                 aiohttp.WSMsgType.CLOSED,
                 aiohttp.WSMsgType.CLOSING,
                 aiohttp.WSMsgType.CLOSE,
+                aiohttp.WSMsgType.ERROR,
             ):
                 _log.debug("Received %s", msg)
                 raise WebSocketClosure

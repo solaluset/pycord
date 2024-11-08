@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 from __future__ import annotations
 
 import array
@@ -172,12 +173,12 @@ class CachedSlotProperty(Generic[T, T_co]):
         self.__doc__ = getattr(function, "__doc__")
 
     @overload
-    def __get__(self, instance: None, owner: type[T]) -> CachedSlotProperty[T, T_co]:
-        ...
+    def __get__(
+        self, instance: None, owner: type[T]
+    ) -> CachedSlotProperty[T, T_co]: ...
 
     @overload
-    def __get__(self, instance: T, owner: type[T]) -> T_co:
-        ...
+    def __get__(self, instance: T, owner: type[T]) -> T_co: ...
 
     def __get__(self, instance: T | None, owner: type[T]) -> Any:
         if instance is None:
@@ -251,18 +252,15 @@ def delay_task(delay: float, func: Coroutine):
 
 
 @overload
-def parse_time(timestamp: None) -> None:
-    ...
+def parse_time(timestamp: None) -> None: ...
 
 
 @overload
-def parse_time(timestamp: str) -> datetime.datetime:
-    ...
+def parse_time(timestamp: str) -> datetime.datetime: ...
 
 
 @overload
-def parse_time(timestamp: str | None) -> datetime.datetime | None:
-    ...
+def parse_time(timestamp: str | None) -> datetime.datetime | None: ...
 
 
 def parse_time(timestamp: str | None) -> datetime.datetime | None:
@@ -298,6 +296,7 @@ def warn_deprecated(
     since: str | None = None,
     removed: str | None = None,
     reference: str | None = None,
+    stacklevel: int = 3,
 ) -> None:
     """Warn about a deprecated function, with the ability to specify details about the deprecation. Emits a
     DeprecationWarning.
@@ -317,6 +316,8 @@ def warn_deprecated(
     reference: Optional[:class:`str`]
         A reference that explains the deprecation, typically a URL to a page such as a changelog entry or a GitHub
         issue/PR.
+    stacklevel: :class:`int`
+        The stacklevel kwarg passed to :func:`warnings.warn`. Defaults to 3.
     """
     warnings.simplefilter("always", DeprecationWarning)  # turn off filter
     message = f"{name} is deprecated"
@@ -330,7 +331,7 @@ def warn_deprecated(
     if reference:
         message += f" See {reference} for more information."
 
-    warnings.warn(message, stacklevel=3, category=DeprecationWarning)
+    warnings.warn(message, stacklevel=stacklevel, category=DeprecationWarning)
     warnings.simplefilter("default", DeprecationWarning)  # reset filter
 
 
@@ -339,6 +340,7 @@ def deprecated(
     since: str | None = None,
     removed: str | None = None,
     reference: str | None = None,
+    stacklevel: int = 3,
     *,
     use_qualname: bool = True,
 ) -> Callable[[Callable[[P], T]], Callable[[P], T]]:
@@ -358,6 +360,8 @@ def deprecated(
     reference: Optional[:class:`str`]
         A reference that explains the deprecation, typically a URL to a page such as a changelog entry or a GitHub
         issue/PR.
+    stacklevel: :class:`int`
+        The stacklevel kwarg passed to :func:`warnings.warn`. Defaults to 3.
     use_qualname: :class:`bool`
         Whether to use the qualified name of the function in the deprecation warning. If ``False``, the short name of
         the function will be used instead. For example, __qualname__ will display as ``Client.login`` while __name__
@@ -373,6 +377,7 @@ def deprecated(
                 since=since,
                 removed=removed,
                 reference=reference,
+                stacklevel=stacklevel,
             )
             return func(*args, **kwargs)
 
@@ -791,8 +796,7 @@ class SnowflakeList(array.array):
 
     if TYPE_CHECKING:
 
-        def __init__(self, data: Iterable[int], *, is_sorted: bool = False):
-            ...
+        def __init__(self, data: Iterable[int], *, is_sorted: bool = False): ...
 
     def __new__(cls, data: Iterable[int], *, is_sorted: bool = False):
         return array.array.__new__(cls, "Q", data if is_sorted else sorted(data))  # type: ignore
@@ -1093,13 +1097,11 @@ async def _achunk(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[li
 
 
 @overload
-def as_chunks(iterator: Iterator[T], max_size: int) -> Iterator[list[T]]:
-    ...
+def as_chunks(iterator: Iterator[T], max_size: int) -> Iterator[list[T]]: ...
 
 
 @overload
-def as_chunks(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[list[T]]:
-    ...
+def as_chunks(iterator: AsyncIterator[T], max_size: int) -> AsyncIterator[list[T]]: ...
 
 
 def as_chunks(iterator: _Iter[T], max_size: int) -> _Iter[list[T]]:
@@ -1304,9 +1306,12 @@ V = Union[Iterable[OptionChoice], Iterable[str], Iterable[int], Iterable[float]]
 AV = Awaitable[V]
 Values = Union[V, Callable[[AutocompleteContext], Union[V, AV]], AV]
 AutocompleteFunc = Callable[[AutocompleteContext], AV]
+FilterFunc = Callable[[AutocompleteContext, Any], Union[bool, Awaitable[bool]]]
 
 
-def basic_autocomplete(values: Values) -> AutocompleteFunc:
+def basic_autocomplete(
+    values: Values, *, filter: FilterFunc | None = None
+) -> AutocompleteFunc:
     """A helper function to make a basic autocomplete for slash commands. This is a pretty standard autocomplete and
     will return any options that start with the value from the user, case-insensitive. If the ``values`` parameter is
     callable, it will be called with the AutocompleteContext.
@@ -1318,18 +1323,21 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
     values: Union[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Callable[[:class:`.AutocompleteContext`], Union[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]], Awaitable[Union[Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
         Possible values for the option. Accepts an iterable of :class:`str`, a callable (sync or async) that takes a
         single argument of :class:`.AutocompleteContext`, or a coroutine. Must resolve to an iterable of :class:`str`.
+    filter: Optional[Callable[[:class:`.AutocompleteContext`, Any], Union[:class:`bool`, Awaitable[:class:`bool`]]]]
+        An optional callable (sync or async) used to filter the autocomplete options. It accepts two arguments:
+        the :class:`.AutocompleteContext` and an item from ``values`` iteration treated as callback parameters. If ``None`` is provided, a default filter is used that includes items whose string representation starts with the user's input value, case-insensitive.
+
+        .. versionadded:: 2.7
 
     Returns
     -------
     Callable[[:class:`.AutocompleteContext`], Awaitable[Union[Iterable[:class:`.OptionChoice`], Iterable[:class:`str`], Iterable[:class:`int`], Iterable[:class:`float`]]]]
         A wrapped callback for the autocomplete.
 
-    Note
-    ----
-    Autocomplete cannot be used for options that have specified choices.
+    Examples
+    --------
 
-    Example
-    -------
+    Basic usage:
 
     .. code-block:: python3
 
@@ -1342,7 +1350,17 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
 
         Option(str, "name", autocomplete=basic_autocomplete(autocomplete))
 
+    With filter parameter:
+
+    .. code-block:: python3
+
+        Option(str, "color", autocomplete=basic_autocomplete(("red", "green", "blue"), filter=lambda c, i: str(c.value or "") in i))
+
     .. versionadded:: 2.0
+
+    Note
+    ----
+    Autocomplete cannot be used for options that have specified choices.
     """
 
     async def autocomplete_callback(ctx: AutocompleteContext) -> V:
@@ -1353,11 +1371,23 @@ def basic_autocomplete(values: Values) -> AutocompleteFunc:
         if asyncio.iscoroutine(_values):
             _values = await _values
 
-        def check(item: Any) -> bool:
-            item = getattr(item, "name", item)
-            return str(item).lower().startswith(str(ctx.value or "").lower())
+        if filter is None:
 
-        gen = (val for val in _values if check(val))
+            def _filter(ctx: AutocompleteContext, item: Any) -> bool:
+                item = getattr(item, "name", item)
+                return str(item).lower().startswith(str(ctx.value or "").lower())
+
+            gen = (val for val in _values if _filter(ctx, val))
+
+        elif asyncio.iscoroutinefunction(filter):
+            gen = (val for val in _values if await filter(ctx, val))
+
+        elif callable(filter):
+            gen = (val for val in _values if filter(ctx, val))
+
+        else:
+            raise TypeError("``filter`` must be callable.")
+
         return iter(itertools.islice(gen, 25))
 
     return autocomplete_callback

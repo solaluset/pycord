@@ -32,7 +32,7 @@ from .partial_emoji import PartialEmoji, _EmojiTag
 from .utils import MISSING, get_slots
 
 if TYPE_CHECKING:
-    from .emoji import Emoji
+    from .emoji import AppEmoji, GuildEmoji
     from .types.components import ActionRow as ActionRowPayload
     from .types.components import ButtonComponent as ButtonComponentPayload
     from .types.components import Component as ComponentPayload
@@ -234,6 +234,8 @@ class Button(Component):
         The label of the button, if any.
     emoji: Optional[:class:`PartialEmoji`]
         The emoji of the button, if available.
+    sku_id: Optional[:class:`int`]
+        The ID of the SKU this button refers to.
     """
 
     __slots__: tuple[str, ...] = (
@@ -243,6 +245,7 @@ class Button(Component):
         "disabled",
         "label",
         "emoji",
+        "sku_id",
     )
 
     __repr_info__: ClassVar[tuple[str, ...]] = __slots__
@@ -259,6 +262,7 @@ class Button(Component):
             self.emoji = PartialEmoji.from_dict(data["emoji"])
         except KeyError:
             self.emoji = None
+        self.sku_id: str | None = data.get("sku_id")
 
     def to_dict(self) -> ButtonComponentPayload:
         payload = {
@@ -275,6 +279,9 @@ class Button(Component):
 
         if self.emoji:
             payload["emoji"] = self.emoji.to_dict()
+
+        if self.sku_id:
+            payload["sku_id"] = self.sku_id
 
         return payload  # type: ignore
 
@@ -405,7 +412,7 @@ class SelectOption:
         label: str,
         value: str = MISSING,
         description: str | None = None,
-        emoji: str | Emoji | PartialEmoji | None = None,
+        emoji: str | GuildEmoji | AppEmoji | PartialEmoji | None = None,
         default: bool = False,
     ) -> None:
         if len(label) > 100:
@@ -437,7 +444,7 @@ class SelectOption:
         return base
 
     @property
-    def emoji(self) -> str | Emoji | PartialEmoji | None:
+    def emoji(self) -> str | GuildEmoji | AppEmoji | PartialEmoji | None:
         """The emoji of the option, if available."""
         return self._emoji
 
@@ -450,7 +457,7 @@ class SelectOption:
                 value = value._to_partial()
             else:
                 raise TypeError(
-                    "expected emoji to be str, Emoji, or PartialEmoji not"
+                    "expected emoji to be str, GuildEmoji, AppEmoji, or PartialEmoji, not"
                     f" {value.__class__}"
                 )
 

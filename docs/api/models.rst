@@ -353,6 +353,16 @@ Interactions
 .. autoclass:: MessageInteraction()
     :members:
 
+.. attributetable:: InteractionMetadata
+
+.. autoclass:: InteractionMetadata()
+    :members:
+
+.. attributetable:: AuthorizingIntegrationOwners
+
+.. autoclass:: AuthorizingIntegrationOwners()
+    :members:
+
 .. attributetable:: Component
 
 .. autoclass:: Component()
@@ -378,9 +388,15 @@ Interactions
 Emoji
 -----
 
-.. attributetable:: Emoji
+.. attributetable:: GuildEmoji
 
-.. autoclass:: Emoji()
+.. autoclass:: GuildEmoji()
+    :members:
+    :inherited-members:
+
+.. attributetable:: AppEmoji
+
+.. autoclass:: AppEmoji()
     :members:
     :inherited-members:
 
@@ -554,6 +570,11 @@ Events
 .. attributetable:: RawAuditLogEntryEvent
 
 .. autoclass:: RawAuditLogEntryEvent()
+    :members:
+
+.. attributetable:: RawVoiceChannelStatusUpdateEvent
+
+.. autoclass:: RawVoiceChannelStatusUpdateEvent()
     :members:
 
 

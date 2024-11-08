@@ -394,7 +394,7 @@ A lot of discord models work out of the gate as a parameter:
 - :class:`Role`
 - :class:`Game`
 - :class:`Colour`
-- :class:`Emoji`
+- :class:`GuildEmoji`
 - :class:`PartialEmoji`
 - :class:`Thread` (since v2.0)
 
@@ -437,7 +437,7 @@ converter is given below:
 +--------------------------+-------------------------------------------------+
 | :class:`Colour`          | :class:`~ext.commands.ColourConverter`          |
 +--------------------------+-------------------------------------------------+
-| :class:`Emoji`           | :class:`~ext.commands.EmojiConverter`           |
+| :class:`GuildEmoji`      | :class:`~ext.commands.EmojiConverter`           |
 +--------------------------+-------------------------------------------------+
 | :class:`PartialEmoji`    | :class:`~ext.commands.PartialEmojiConverter`    |
 +--------------------------+-------------------------------------------------+
@@ -573,11 +573,10 @@ When mixed with the :data:`typing.Optional` converter you can provide simple and
 
     @bot.command()
     async def ban(ctx, members: commands.Greedy[discord.Member],
-                       delete_days: typing.Optional[int] = 0, *,
+                       delete_seconds: typing.Optional[int] = 0, *,
                        reason: str):
-        """Mass bans members with an optional delete_days parameter"""
-        for member in members:
-            await member.ban(delete_message_days=delete_days, reason=reason)
+        """Bulk bans members with an optional delete_seconds parameter"""
+        await ctx.guild.bulk_ban(*members, delete_message_seconds=delete_seconds, reason=reason)
 
 
 This command can be invoked any of the following ways:
@@ -707,7 +706,7 @@ For example, augmenting the example above:
     @commands.command()
     async def ban(ctx, *, flags: BanFlags):
         for member in flags.members:
-            await member.ban(reason=flags.reason, delete_message_days=flags.days)
+            await member.ban(reason=flags.reason, delete_message_seconds=flags.days * 60 * 24)
 
         members = ', '.join(str(member) for member in flags.members)
         plural = f'{flags.days} days' if flags.days != 1 else f'{flags.days} day'

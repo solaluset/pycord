@@ -805,8 +805,8 @@ class GuildConverter(IDConverter[discord.Guild]):
         return result
 
 
-class EmojiConverter(IDConverter[discord.Emoji]):
-    """Converts to a :class:`~discord.Emoji`.
+class EmojiConverter(IDConverter[discord.GuildEmoji]):
+    """Converts to a :class:`~discord.GuildEmoji`.
 
     All lookups are done for the local guild first, if available. If that lookup
     fails, then it checks the client's global cache.
@@ -821,7 +821,7 @@ class EmojiConverter(IDConverter[discord.Emoji]):
          Raise :exc:`.EmojiNotFound` instead of generic :exc:`.BadArgument`
     """
 
-    async def convert(self, ctx: Context, argument: str) -> discord.Emoji:
+    async def convert(self, ctx: Context, argument: str) -> discord.GuildEmoji:
         match = self._get_id_match(argument) or re.match(
             r"<a?:\w{1,32}:([0-9]{15,20})>$", argument
         )
@@ -1111,7 +1111,7 @@ CONVERTER_MAPPING: dict[type[Any], Any] = {
     discord.Colour: ColourConverter,
     discord.VoiceChannel: VoiceChannelConverter,
     discord.StageChannel: StageChannelConverter,
-    discord.Emoji: EmojiConverter,
+    discord.GuildEmoji: EmojiConverter,
     discord.PartialEmoji: PartialEmojiConverter,
     discord.CategoryChannel: CategoryChannelConverter,
     discord.ForumChannel: ForumChannelConverter,
@@ -1166,7 +1166,7 @@ async def _actual_conversion(
 
 
 async def run_converters(
-    ctx: Context, converter, argument: str, param: inspect.Parameter
+    ctx: Context, converter, argument: str | None, param: inspect.Parameter
 ):
     """|coro|
 
@@ -1182,7 +1182,7 @@ async def run_converters(
         The invocation context to run the converters under.
     converter: Any
         The converter to run, this corresponds to the annotation in the function.
-    argument: :class:`str`
+    argument: Optional[:class:`str`]
         The argument to convert to.
     param: :class:`inspect.Parameter`
         The parameter being converted. This is mainly for error reporting.
