@@ -46,7 +46,7 @@ from .automod import AutoModAction, AutoModRule, AutoModTriggerMetadata
 from .channel import *
 from .channel import _guild_channel_factory, _threaded_guild_channel_factory
 from .colour import Colour
-from .emoji import Emoji, PartialEmoji, _EmojiTag
+from .emoji import GuildEmoji, PartialEmoji, _EmojiTag
 from .enums import (
     AuditLogAction,
     AutoModEventType,
@@ -161,7 +161,7 @@ class Guild(Hashable):
     ----------
     name: :class:`str`
         The guild name.
-    emojis: Tuple[:class:`Emoji`, ...]
+    emojis: Tuple[:class:`GuildEmoji`, ...]
         All emojis that the guild owns.
     stickers: Tuple[:class:`GuildSticker`, ...]
         All stickers that the guild owns.
@@ -210,7 +210,7 @@ class Guild(Hashable):
     features: List[:class:`str`]
         A list of features that the guild has. The features that a guild can have are
         subject to arbitrary change by Discord. You can find a catalog of guild features
-        `here <https://github.com/Delitefully/DiscordLists#guild-feature-glossary>`_.
+        `here <https://github.com/Delitefully/DiscordLists?tab=readme-ov-file#guild-feature-glossary>`_.
     premium_tier: :class:`int`
         The premium tier for this guild. Corresponds to "Nitro Server" in the official UI.
         The number goes from 0 to 3 inclusive.
@@ -476,7 +476,7 @@ class Guild(Hashable):
             self._roles[role.id] = role
 
         self.mfa_level: MFALevel = guild.get("mfa_level")
-        self.emojis: tuple[Emoji, ...] = tuple(
+        self.emojis: tuple[GuildEmoji, ...] = tuple(
             map(lambda d: state.store_emoji(self, d), guild.get("emojis", []))
         )
         self.stickers: tuple[GuildSticker, ...] = tuple(
@@ -1404,7 +1404,7 @@ class Guild(Hashable):
         slowmode_delay: int = MISSING,
         nsfw: bool = MISSING,
         overwrites: dict[Role | Member, PermissionOverwrite] = MISSING,
-        default_reaction_emoji: Emoji | int | str = MISSING,
+        default_reaction_emoji: GuildEmoji | int | str = MISSING,
     ) -> ForumChannel:
         """|coro|
 
@@ -1446,10 +1446,10 @@ class Guild(Hashable):
             To mark the channel as NSFW or not.
         reason: Optional[:class:`str`]
             The reason for creating this channel. Shows up on the audit log.
-        default_reaction_emoji: Optional[:class:`Emoji` | :class:`int` | :class:`str`]
+        default_reaction_emoji: Optional[:class:`GuildEmoji` | :class:`int` | :class:`str`]
             The default reaction emoji.
             Can be a unicode emoji or a custom emoji in the forms:
-            :class:`Emoji`, snowflake ID, string representation (eg. '<a:emoji_name:emoji_id>').
+            :class:`GuildEmoji`, snowflake ID, string representation (eg. '<a:emoji_name:emoji_id>').
 
             .. versionadded:: v2.5
 
@@ -1502,7 +1502,9 @@ class Guild(Hashable):
             options["nsfw"] = nsfw
 
         if default_reaction_emoji is not MISSING:
-            if isinstance(default_reaction_emoji, _EmojiTag):  # Emoji, PartialEmoji
+            if isinstance(
+                default_reaction_emoji, _EmojiTag
+            ):  # GuildEmoji, PartialEmoji
                 default_reaction_emoji = default_reaction_emoji._to_partial()
             elif isinstance(default_reaction_emoji, int):
                 default_reaction_emoji = PartialEmoji(
@@ -1512,7 +1514,7 @@ class Guild(Hashable):
                 default_reaction_emoji = PartialEmoji.from_str(default_reaction_emoji)
             else:
                 raise InvalidArgument(
-                    "default_reaction_emoji must be of type: Emoji | int | str"
+                    "default_reaction_emoji must be of type: GuildEmoji | int | str"
                 )
 
             options["default_reaction_emoji"] = (
@@ -1654,7 +1656,6 @@ class Guild(Hashable):
         default_notifications: NotificationLevel = MISSING,
         verification_level: VerificationLevel = MISSING,
         explicit_content_filter: ContentFilter = MISSING,
-        vanity_code: str = MISSING,
         system_channel: TextChannel | None = MISSING,
         system_channel_flags: SystemChannelFlags = MISSING,
         preferred_locale: str = MISSING,
@@ -1720,8 +1721,6 @@ class Guild(Hashable):
             The new default notification level for the guild.
         explicit_content_filter: :class:`ContentFilter`
             The new explicit content filter for the guild.
-        vanity_code: :class:`str`
-            The new vanity code for the guild.
         system_channel: Optional[:class:`TextChannel`]
             The new channel that is used for the system channel. Could be ``None`` for no system channel.
         system_channel_flags: :class:`SystemChannelFlags`
@@ -1763,9 +1762,6 @@ class Guild(Hashable):
         """
 
         http = self._state.http
-
-        if vanity_code is not MISSING:
-            await http.change_vanity_code(self.id, vanity_code, reason=reason)
 
         fields: dict[str, Any] = {}
         if name is not MISSING:
@@ -2668,10 +2664,10 @@ class Guild(Hashable):
         """
         await self._state.http.delete_guild_sticker(self.id, sticker.id, reason)
 
-    async def fetch_emojis(self) -> list[Emoji]:
+    async def fetch_emojis(self) -> list[GuildEmoji]:
         r"""|coro|
 
-        Retrieves all custom :class:`Emoji`\s from the guild.
+        Retrieves all custom :class:`GuildEmoji`\s from the guild.
 
         .. note::
 
@@ -2684,16 +2680,16 @@ class Guild(Hashable):
 
         Returns
         --------
-        List[:class:`Emoji`]
+        List[:class:`GuildEmoji`]
             The retrieved emojis.
         """
         data = await self._state.http.get_all_custom_emojis(self.id)
-        return [Emoji(guild=self, state=self._state, data=d) for d in data]
+        return [GuildEmoji(guild=self, state=self._state, data=d) for d in data]
 
-    async def fetch_emoji(self, emoji_id: int, /) -> Emoji:
+    async def fetch_emoji(self, emoji_id: int, /) -> GuildEmoji:
         """|coro|
 
-        Retrieves a custom :class:`Emoji` from the guild.
+        Retrieves a custom :class:`GuildEmoji` from the guild.
 
         .. note::
 
@@ -2707,7 +2703,7 @@ class Guild(Hashable):
 
         Returns
         -------
-        :class:`Emoji`
+        :class:`GuildEmoji`
             The retrieved emoji.
 
         Raises
@@ -2718,7 +2714,7 @@ class Guild(Hashable):
             An error occurred fetching the emoji.
         """
         data = await self._state.http.get_custom_emoji(self.id, emoji_id)
-        return Emoji(guild=self, state=self._state, data=data)
+        return GuildEmoji(guild=self, state=self._state, data=data)
 
     async def create_custom_emoji(
         self,
@@ -2727,10 +2723,10 @@ class Guild(Hashable):
         image: bytes,
         roles: list[Role] = MISSING,
         reason: str | None = None,
-    ) -> Emoji:
+    ) -> GuildEmoji:
         r"""|coro|
 
-        Creates a custom :class:`Emoji` for the guild.
+        Creates a custom :class:`GuildEmoji` for the guild.
 
         There is currently a limit of 50 static and animated emojis respectively per guild,
         unless the guild has the ``MORE_EMOJI`` feature which extends the limit to 200.
@@ -2759,7 +2755,7 @@ class Guild(Hashable):
 
         Returns
         --------
-        :class:`Emoji`
+        :class:`GuildEmoji`
             The created emoji.
         """
 
@@ -2775,7 +2771,7 @@ class Guild(Hashable):
     ) -> None:
         """|coro|
 
-        Deletes the custom :class:`Emoji` from the guild.
+        Deletes the custom :class:`GuildEmoji` from the guild.
 
         You must have :attr:`~Permissions.manage_emojis` permission to
         do this.
@@ -2820,6 +2816,30 @@ class Guild(Hashable):
         """
         data = await self._state.http.get_roles(self.id)
         return [Role(guild=self, state=self._state, data=d) for d in data]
+
+    async def fetch_role(self, role_id: int) -> Role:
+        """|coro|
+
+        Retrieves a :class:`Role` that the guild has.
+
+        .. note::
+
+            This method is an API call. For general usage, consider using :attr:`get_role` instead.
+
+        .. versionadded:: 2.7
+
+        Returns
+        -------
+        :class:`Role`
+            The role in the guild with the specified ID.
+
+        Raises
+        ------
+        HTTPException
+            Retrieving the role failed.
+        """
+        data = await self._state.http.get_role(self.id, role_id)
+        return Role(guild=self, state=self._state, data=data)
 
     async def _fetch_role(self, role_id: int) -> Role:
         """|coro|
@@ -3266,13 +3286,15 @@ class Guild(Hashable):
         limit: int | None = 100,
         before: SnowflakeTime | None = None,
         after: SnowflakeTime | None = None,
-        oldest_first: bool | None = None,
         user: Snowflake = None,
         action: AuditLogAction = None,
     ) -> AuditLogIterator:
         """Returns an :class:`AsyncIterator` that enables receiving the guild's audit logs.
 
         You must have the :attr:`~Permissions.view_audit_log` permission to use this.
+
+        See `API documentation <https://discord.com/developers/docs/resources/audit-log#get-guild-audit-log>`_
+        for more information about the `before` and `after` parameters.
 
         Parameters
         ----------
@@ -3286,9 +3308,6 @@ class Guild(Hashable):
             Retrieve entries after this date or entry.
             If a datetime is provided, it is recommended to use a UTC aware datetime.
             If the datetime is naive, it is assumed to be local time.
-        oldest_first: :class:`bool`
-            If set to ``True``, return entries in oldest->newest order. Defaults to ``True`` if
-            ``after`` is specified, otherwise ``False``.
         user: :class:`abc.Snowflake`
             The moderator to filter entries from.
         action: :class:`AuditLogAction`
@@ -3333,7 +3352,6 @@ class Guild(Hashable):
             before=before,
             after=after,
             limit=limit,
-            oldest_first=oldest_first,
             user_id=user_id,
             action_type=action,
         )
@@ -4073,7 +4091,9 @@ class Guild(Hashable):
             "owner_id": self.id,
             "owner_type": EntitlementOwnerType.guild.value,
         }
-        data = await self._state.http.create_test_entitlement(self.id, payload)
+        data = await self._state.http.create_test_entitlement(
+            self._state.application_id, payload
+        )
         return Entitlement(data=data, state=self._state)
 
     def entitlements(
