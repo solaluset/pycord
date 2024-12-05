@@ -171,6 +171,7 @@ class HTTPClient:
         proxy_auth: aiohttp.BasicAuth | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         unsync_clock: bool = True,
+        is_bot: bool = True,
     ) -> None:
         self.loop: asyncio.AbstractEventLoop = (
             asyncio.get_event_loop() if loop is None else loop
@@ -186,12 +187,16 @@ class HTTPClient:
         self.proxy_auth: aiohttp.BasicAuth | None = proxy_auth
         self.use_clock: bool = not unsync_clock
 
-        user_agent = (
-            "DiscordBot (https://pycord.dev, {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-        )
-        self.user_agent: str = user_agent.format(
-            __version__, sys.version_info, aiohttp.__version__
-        )
+        if is_bot:
+            user_agent = (
+                "DiscordBot (https://pycord.dev, {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+            )
+            self.user_agent: str = user_agent.format(
+                __version__, sys.version_info, aiohttp.__version__
+            )
+        else:
+            self.user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+        self.is_bot = is_bot
 
     def recreate(self) -> None:
         if self.__session.closed:
@@ -238,8 +243,11 @@ class HTTPClient:
             "User-Agent": self.user_agent,
         }
 
-        if self.token is not None:
-            headers["Authorization"] = f"Bot {self.token}"
+        token = self.token
+        if token is not None:
+            if self.is_bot:
+                token = f"Bot {token}"
+            headers["Authorization"] = token
         # some checking if it's a JSON request
         if "json" in kwargs:
             headers["Content-Type"] = "application/json"
