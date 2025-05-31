@@ -76,6 +76,8 @@ __all__ = (
     "EntitlementOwnerType",
     "IntegrationType",
     "InteractionContextType",
+    "PollLayoutType",
+    "MessageReferenceType",
 )
 
 
@@ -266,6 +268,12 @@ class MessageType(Enum):
     stage_raise_hand = 30
     stage_topic = 31
     guild_application_premium_subscription = 32
+    guild_incident_alert_mode_enabled = 36
+    guild_incident_alert_mode_disabled = 37
+    guild_incident_report_raid = 38
+    guild_incident_report_false_alarm = 39
+    purchase_notification = 44
+    poll_result = 46
 
 
 class VoiceRegion(Enum):
@@ -825,6 +833,7 @@ class SlashCommandOptionType(Enum):
             "ThreadOption",
             "Thread",
             "ForumChannel",
+            "MediaChannel",
             "DMChannel",
         ]:
             return cls.channel
@@ -1052,6 +1061,21 @@ class PollLayoutType(Enum):
     """The poll's layout type."""
 
     default = 1
+
+
+class MessageReferenceType(Enum):
+    """The type of the message reference object"""
+
+    default = 0
+    forward = 1
+
+
+class SubscriptionStatus(Enum):
+    """The status of a subscription."""
+
+    active = 0
+    ending = 1
+    inactive = 2
 
 
 T = TypeVar("T")
