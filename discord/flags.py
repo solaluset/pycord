@@ -411,6 +411,14 @@ class MessageFlags(BaseFlags):
         """
         return 8192
 
+    @flag_value
+    def has_snapshot(self):
+        """:class:`bool`: Returns ``True`` if this message has a snapshot from message forwarding.
+
+        .. versionadded:: 2.7
+        """
+        return 1 << 14
+
 
 @fill_with_flags()
 class PublicUserFlags(BaseFlags):
@@ -1560,6 +1568,14 @@ class ChannelFlags(BaseFlags):
         .. versionadded:: 2.2
         """
         return 1 << 4
+
+    @flag_value
+    def hide_media_download_options(self):
+        """:class:`bool`: Returns ``True`` if the embedded media download options are hidden for the media channel posts.
+
+        .. versionadded:: 2.7
+        """
+        return 1 << 15
 
 
 @fill_with_flags()
