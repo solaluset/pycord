@@ -76,3 +76,5 @@ from .welcome_screen import *
 from .widget import *
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+__version__ += "-SL"
