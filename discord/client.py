@@ -238,6 +238,7 @@ class Client:
         )
         self.shard_id: int | None = options.get("shard_id")
         self.shard_count: int | None = options.get("shard_count")
+        self.ws_properties: dict[str, str] = options.get("ws_properties", {})
 
         connector: aiohttp.BaseConnector | None = options.pop("connector", None)
         proxy: str | None = options.pop("proxy", None)
