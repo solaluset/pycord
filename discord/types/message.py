@@ -81,6 +81,7 @@ class Attachment(TypedDict):
     waveform: NotRequired[str]
     flags: NotRequired[int]
     title: NotRequired[str]
+    ephemeral: NotRequired[bool]
 
 
 MessageActivityType = Literal[1, 2, 3, 5]
@@ -173,6 +174,16 @@ class Message(TypedDict):
     poll: Poll
     call: MessageCall
     message_snapshots: NotRequired[list[MessageSnapshot]]
+
+
+class MessagePin(TypedDict):
+    pinned_at: str
+    message: Message
+
+
+class MessagePinPagination(TypedDict):
+    items: list[MessagePin]
+    has_more: bool
 
 
 AllowedMentionType = Literal["roles", "users", "everyone"]
