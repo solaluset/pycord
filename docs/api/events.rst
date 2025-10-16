@@ -410,42 +410,6 @@ Connection
                     WebSocket library. It can be :class:`bytes` to denote a binary
                     message or :class:`str` to denote a regular text message.
 
-Entitlements
-------------
-.. function:: on_entitlement_create(entitlement)
-
-    Called when a user subscribes to an SKU.
-
-    .. versionadded:: 2.5
-
-    :param entitlement: The entitlement that was created as a result of the subscription.
-    :type entitlement: :class:`Entitlement`
-
-.. function:: on_entitlement_update(entitlement)
-
-    Called when a user's subscription to an Entitlement is renewed for the next billing period.
-
-    .. versionadded:: 2.5
-
-    :param entitlement: The entitlement that was updated.
-    :type entitlement: :class:`Entitlement`
-
-.. function:: on_entitlement_delete(entitlement)
-
-    Called when a user's entitlement is deleted.
-
-    Entitlements are usually only deleted when Discord issues a refund for a subscription,
-    or manually removes an entitlement from a user.
-
-    .. note::
-
-        This is not called when a user's subscription is cancelled.
-
-    .. versionadded:: 2.5
-
-    :param entitlement: The entitlement that was deleted.
-    :type entitlement: :class:`Entitlement`
-
 Guilds
 ------
 .. function:: on_guild_join(guild)
@@ -911,7 +875,7 @@ Messages
     :type payload: :class:`RawMessageUpdateEvent`
 
 Polls
-~~~~~~~~~
+~~~~~~
 .. function:: on_poll_vote_add(poll, user, answer)
 
     Called when a vote is cast on a poll. If multiple answers were selected, this fires multiple times.
@@ -1078,6 +1042,78 @@ Reactions
 
     :param payload: The raw event payload data.
     :type payload: :class:`RawReactionClearEmojiEvent`
+
+Monetization
+------------
+.. function:: on_entitlement_create(entitlement)
+
+    Called when a user subscribes to an SKU.
+
+    .. versionadded:: 2.5
+
+    :param entitlement: The entitlement that was created as a result of the subscription.
+    :type entitlement: :class:`Entitlement`
+
+.. function:: on_entitlement_update(entitlement)
+
+    Called when a user's subscription to an Entitlement is cancelled.
+
+    .. versionadded:: 2.5
+
+    .. note::
+
+        Before October 1, 2024, this event was called when a user's subscription was renewed.
+
+        Entitlements that no longer follow this behavior will have a type of :attr:`EntitlementType.purchase`.
+        Those that follow the old behavior will have a type of :attr:`EntitlementType.application_subscription`.
+
+        `See the Discord changelog. <https://discord.com/developers/docs/change-log#premium-apps-entitlement-migration-and-new-subscription-api>`_
+
+    :param entitlement: The entitlement that was updated.
+    :type entitlement: :class:`Entitlement`
+
+.. function:: on_entitlement_delete(entitlement)
+
+    Called when a user's entitlement is deleted.
+
+    Entitlements are usually only deleted when Discord issues a refund for a subscription,
+    or manually removes an entitlement from a user.
+
+    .. note::
+
+        This is not called when a user's subscription is cancelled.
+
+    .. versionadded:: 2.5
+
+    :param entitlement: The entitlement that was deleted.
+    :type entitlement: :class:`Entitlement`
+
+.. function:: on_subscription_create(subscription)
+
+    Called when a subscription is created for the application.
+
+    .. versionadded:: 2.7
+
+    :param subscription: The subscription that was created.
+    :type subscription: :class:`Subscription`
+
+.. function:: on_subscription_update(subscription)
+
+    Called when a subscription has been updated. This could be a renewal, cancellation, or other payment related update.
+
+    .. versionadded:: 2.7
+
+    :param subscription: The subscription that was updated.
+    :type subscription: :class:`Subscription`
+
+.. function:: on_subscription_delete(subscription)
+
+    Called when a subscription has been deleted.
+
+    .. versionadded:: 2.7
+
+    :param subscription: The subscription that was deleted.
+    :type subscription: :class:`Subscription`
 
 Scheduled Events
 ----------------
@@ -1377,3 +1413,85 @@ Voice Channel Status Update
 
     :param payload: The raw voice channel status update payload.
     :type payload: :class:`RawVoiceChannelStatusUpdateEvent`
+
+Voice Channel Effects
+---------------------
+.. function:: on_voice_channel_effect_send(event)
+
+    Called when a voice channel effect is sent.
+
+    .. versionadded:: 2.7
+
+    :param event: The voice channel effect event.
+    :type event: :class:`VoiceChannelEffectSendEvent`
+
+Soundboard Sound
+----------------
+.. function:: on_soundboard_sounds_update(before, after)
+
+    Called when multiple guild soundboard sounds are updated at once and they were all already in the cache.
+    This is called, for example, when a guild loses a boost level and some sounds become unavailable.
+
+    .. versionadded:: 2.7
+
+    :param before: The soundboard sounds prior to being updated.
+    :type before: List[:class:`SoundboardSound`]
+    :param after: The soundboard sounds after being updated.
+    :type after: List[:class:`SoundboardSound`]
+
+.. function:: on_raw_soundboard_sounds_update(after)
+
+    Called when multiple guild soundboard sounds are updated at once.
+    This is called, for example, when a guild loses a boost level and some sounds become unavailable.
+
+    .. versionadded:: 2.7
+
+    :param after: The soundboard sounds after being updated.
+    :type after: List[:class:`SoundboardSound`]
+
+.. function:: on_soundboard_sound_update(before, after)
+
+    Called when a soundboard sound is updated and it was already in the cache.
+
+    .. versionadded:: 2.7
+
+    :param before: The soundboard sound prior to being updated.
+    :type before: :class:`Soundboard`
+    :param after: The soundboard sound after being updated.
+    :type after: :class:`Soundboard`
+
+.. function:: on_raw_soundboard_sound_update(after)
+
+        Called when a soundboard sound is updated.
+
+        .. versionadded:: 2.7
+
+        :param after: The soundboard sound after being updated.
+        :type after: :class:`SoundboardSound`
+
+.. function:: on_soundboard_sound_delete(sound)
+
+        Called when a soundboard sound is deleted.
+
+        .. versionadded:: 2.7
+
+        :param sound: The soundboard sound that was deleted.
+        :type sound: :class:`SoundboardSound`
+
+.. function:: on_raw_soundboard_sound_delete(payload)
+
+        Called when a soundboard sound is deleted.
+
+        .. versionadded:: 2.7
+
+        :param payload: The raw event payload data.
+        :type payload: :class:`RawSoundboardSoundDeleteEvent`
+
+.. function:: on_soundboard_sound_create(sound)
+
+        Called when a soundboard sound is created.
+
+        .. versionadded:: 2.7
+
+        :param sound: The soundboard sound that was created.
+        :type sound: :class:`SoundboardSound`

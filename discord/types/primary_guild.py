@@ -22,17 +22,15 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-import sys
+from __future__ import annotations
 
-# PEP 655 Required and NotRequired were added in python 3.11. This file is simply a
-# shortcut import, so we don't have to repeat this import logic across files.
-if sys.version_info >= (3, 11):
-    from typing import NotRequired, Required, TypedDict
-else:
-    from typing_extensions import NotRequired, Required, TypedDict
+from typing import TypedDict
 
-__all__ = (
-    "Required",
-    "NotRequired",
-    "TypedDict",
-)
+from .snowflake import Snowflake
+
+
+class PrimaryGuild(TypedDict):
+    identity_guild_id: Snowflake
+    identity_enabled: bool | None
+    tag: str
+    badge: str

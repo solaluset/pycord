@@ -487,10 +487,19 @@ linkcheck_ignore = [
     r"https://packages.debian.org/.*",
 ]
 
+linkcheck_exclude_documents = [
+    r".*/migrating_to_v1.*",
+    r".*/migrating_to_v2.*",
+    r".*/old_changelog.*",
+    r"migrating_to_v1.*",
+    r"migrating_to_v2.*",
+    r"old_changelog.*",
+]
+
 linkcheck_anchors_ignore_for_url = [r"https://github.com/Delitefully/DiscordLists"]
 
 modindex_common_prefix = ["discord."]
-# suppress_warnings = ['autosectionlabel.*']
+suppress_warnings = ["autosectionlabel.*"]
 myst_enable_extensions = [
     "amsmath",
     "attrs_inline",
