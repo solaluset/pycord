@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
+import datetime
 from typing import TYPE_CHECKING, Any, Coroutine, Union
 
 from . import utils
@@ -37,7 +38,7 @@ from .enums import (
     try_enum,
 )
 from .errors import ClientException, InteractionResponded, InvalidArgument
-from .file import File
+from .file import File, VoiceMessage
 from .flags import MessageFlags
 from .guild import Guild
 from .member import Member
@@ -60,6 +61,7 @@ __all__ = (
     "MessageInteraction",
     "InteractionMetadata",
     "AuthorizingIntegrationOwners",
+    "InteractionCallback",
 )
 
 if TYPE_CHECKING:
@@ -75,14 +77,15 @@ if TYPE_CHECKING:
         VoiceChannel,
     )
     from .client import Client
-    from .commands import OptionChoice
+    from .commands import ApplicationCommand, OptionChoice
     from .embeds import Embed
     from .mentions import AllowedMentions
     from .poll import Poll
     from .state import ConnectionState
     from .threads import Thread
     from .types.interactions import Interaction as InteractionPayload
-    from .types.interactions import InteractionData
+    from .types.interactions import InteractionCallback as InteractionCallbackPayload
+    from .types.interactions import InteractionCallbackResponse, InteractionData
     from .types.interactions import InteractionMetadata as InteractionMetadataPayload
     from .types.interactions import MessageInteraction as MessageInteractionPayload
     from .ui.modal import Modal
@@ -119,7 +122,7 @@ class Interaction:
         The interaction type.
     guild_id: Optional[:class:`int`]
         The guild ID the interaction was sent from.
-    channel: Optional[Union[:class:`abc.GuildChannel`, :class:`abc.PrivateChannel`, :class:`Thread`]]
+    channel: Optional[Union[:class:`abc.GuildChannel`, :class:`abc.PrivateChannel`, :class:`Thread`, :class:`PartialMessageable`]]
         The channel the interaction was sent from.
     channel_id: Optional[:class:`int`]
         The ID of the channel the interaction was sent from.
@@ -152,6 +155,27 @@ class Interaction:
         The context in which this command was executed.
 
         .. versionadded:: 2.6
+    callback: Optional[:class:`InteractionCallback`]
+        The callback of the interaction. Contains information about the status of the interaction response.
+        Will be `None` until the interaction is responded to.
+
+        .. versionadded:: 2.7
+    command: Optional[:class:`ApplicationCommand`]
+        The command that this interaction belongs to.
+
+        .. versionadded:: 2.7
+    view: Optional[:class:`View`]
+        The view that this interaction belongs to.
+
+        .. versionadded:: 2.7
+    modal: Optional[:class:`Modal`]
+        The modal that this interaction belongs to.
+
+        .. versionadded:: 2.7
+    attachment_size_limit: :class:`int`
+        The attachment size limit.
+
+        .. versionadded:: 2.7
     """
 
     __slots__: tuple[str, ...] = (
@@ -172,6 +196,12 @@ class Interaction:
         "entitlements",
         "context",
         "authorizing_integration_owners",
+        "callback",
+        "command",
+        "view",
+        "modal",
+        "attachment_size_limit",
+        "_raw_data",
         "_channel_data",
         "_message_data",
         "_guild_data",
@@ -191,9 +221,11 @@ class Interaction:
         self._state: ConnectionState = state
         self._session: ClientSession = state.http._HTTPClient__session
         self._original_response: InteractionMessage | None = None
+        self.callback: InteractionCallback | None = None
         self._from_data(data)
 
     def _from_data(self, data: InteractionPayload):
+        self._raw_data: InteractionPayload = data
         self.id: int = int(data["id"])
         self.type: InteractionType = try_enum(InteractionType, data["type"])
         self.data: InteractionData | None = data.get("data")
@@ -223,6 +255,11 @@ class Interaction:
             if "context" in data
             else None
         )
+
+        self.command: ApplicationCommand | None = None
+        self.view: View | None = None
+        self.modal: Modal | None = None
+        self.attachment_size_limit: int = data.get("attachment_size_limit")
 
         self.message: Message | None = None
         self.channel = None
@@ -261,20 +298,23 @@ class Interaction:
             except KeyError:
                 pass
 
-        if channel := data.get("channel"):
-            if (ch_type := channel.get("type")) is not None:
-                factory, ch_type = _threaded_channel_factory(ch_type)
+        channel = data.get("channel")
+        data_ch_type: int | None = channel.get("type") if channel else None
 
-                if ch_type in (ChannelType.group, ChannelType.private):
-                    self.channel = factory(
-                        me=self.user, data=channel, state=self._state
-                    )
-                elif self.guild:
-                    self.channel = factory(
-                        guild=self.guild, state=self._state, data=channel
-                    )
-        else:
-            self.channel = self.cached_channel
+        if data_ch_type is not None:
+            factory, ch_type = _threaded_channel_factory(data_ch_type)
+            if ch_type in (ChannelType.group, ChannelType.private):
+                self.channel = factory(me=self.user, data=channel, state=self._state)
+
+        if self.channel is None and self.guild:
+            self.channel = self.guild._resolve_channel(self.channel_id)
+        if self.channel is None and self.channel_id is not None:
+            ch_type = (
+                ChannelType.text if self.guild_id is not None else ChannelType.private
+            )
+            self.channel = PartialMessageable(
+                state=self._state, id=self.channel_id, type=ch_type
+            )
 
         self._channel_data = channel
 
@@ -297,6 +337,11 @@ class Interaction:
             return self._guild
         return self._state and self._state._get_guild(self.guild_id)
 
+    @property
+    def created_at(self) -> datetime.datetime:
+        """Returns the interaction's creation time in UTC."""
+        return utils.snowflake_time(self.id)
+
     def is_command(self) -> bool:
         """Indicates whether the interaction is an application command."""
         return self.type == InteractionType.application_command
@@ -306,12 +351,12 @@ class Interaction:
         return self.type == InteractionType.component
 
     @utils.cached_slot_property("_cs_channel")
+    @utils.deprecated("Interaction.channel", "2.7", stacklevel=4)
     def cached_channel(self) -> InteractionChannel | None:
-        """The channel the
-        interaction was sent from.
+        """The cached channel from which the interaction was sent.
+        DM channels are not resolved. These are :class:`PartialMessageable` instead.
 
-        Note that due to a Discord limitation, DM channels are not resolved since there is
-        no data to complete them. These are :class:`PartialMessageable` instead.
+        .. deprecated:: 2.7
         """
         guild = self.guild
         channel = guild and guild._resolve_channel(self.channel_id)
@@ -360,6 +405,48 @@ class Interaction:
         }
         return Webhook.from_state(data=payload, state=self._state)
 
+    def is_guild_authorised(self) -> bool:
+        """:class:`bool`: Checks if the interaction is guild authorised.
+
+        There is an alias for this called :meth:`.is_guild_authorized`.
+
+        .. versionadded:: 2.7
+        """
+        if self.guild_id:
+            return self.authorizing_integration_owners.guild_id == self.guild_id
+        return False
+
+    def is_user_authorised(self) -> bool:
+        """:class:`bool`: Checks if the interaction is user authorised.
+
+        There is an alias for this called :meth:`.is_user_authorized`.
+
+        .. versionadded:: 2.7
+        """
+        if self.user:
+            return self.authorizing_integration_owners.user_id == self.user.id
+
+        # This return should not be called but to make sure it returns the expected value
+        return False
+
+    def is_guild_authorized(self) -> bool:
+        """:class:`bool`: Checks if the interaction is guild authorized.
+
+        There is an alias for this called :meth:`.is_guild_authorised`.
+
+        .. versionadded:: 2.7
+        """
+        return self.is_guild_authorised()
+
+    def is_user_authorized(self) -> bool:
+        """:class:`bool`: Checks if the interaction is user authorized.
+
+        There is an alias for this called :meth:`.is_user_authorised`.
+
+        .. versionadded:: 2.7
+        """
+        return self.is_user_authorised()
+
     async def original_response(self) -> InteractionMessage:
         """|coro|
 
@@ -390,7 +477,9 @@ class Interaction:
         # TODO: fix later to not raise?
         channel = self.channel
         if channel is None:
-            raise ClientException("Channel for message could not be resolved")
+            raise ClientException(
+                "Channel for message could not be resolved. Please open a issue on GitHub if you encounter this error."
+            )
 
         adapter = async_context.get()
         http = self._state.http
@@ -524,9 +613,13 @@ class Interaction:
         # The message channel types should always match
         state = _InteractionMessageState(self, self._state)
         message = InteractionMessage(state=state, channel=self.channel, data=data)  # type: ignore
-        if view and not view.is_finished():
+        if view:
+            if not view.is_finished():
+                view.refresh(message.components)
+                if view.is_dispatchable():
+                    self._state.store_view(view, message.id)
+
             view.message = message
-            self._state.store_view(view, message.id)
 
         if delete_after is not None:
             await self.delete_original_response(delay=delete_after)
@@ -780,18 +873,21 @@ class InteractionResponse:
         if defer_type:
             adapter = async_context.get()
             http = parent._state.http
-            await self._locked_response(
-                adapter.create_interaction_response(
-                    parent.id,
-                    parent.token,
-                    session=parent._session,
-                    type=defer_type,
-                    data=data,
-                    proxy=http.proxy,
-                    proxy_auth=http.proxy_auth,
+            callback_response: InteractionCallbackResponse = (
+                await self._locked_response(
+                    adapter.create_interaction_response(
+                        parent.id,
+                        parent.token,
+                        session=parent._session,
+                        type=defer_type,
+                        data=data,
+                        proxy=http.proxy,
+                        proxy_auth=http.proxy_auth,
+                    )
                 )
             )
             self._responded = True
+            await self._process_callback_response(callback_response)
 
     async def pong(self) -> None:
         """|coro|
@@ -814,17 +910,36 @@ class InteractionResponse:
         if parent.type is InteractionType.ping:
             adapter = async_context.get()
             http = parent._state.http
-            await self._locked_response(
-                adapter.create_interaction_response(
-                    parent.id,
-                    parent.token,
-                    session=parent._session,
-                    proxy=http.proxy,
-                    proxy_auth=http.proxy_auth,
-                    type=InteractionResponseType.pong.value,
+            callback_response: InteractionCallbackResponse = (
+                await self._locked_response(
+                    adapter.create_interaction_response(
+                        parent.id,
+                        parent.token,
+                        session=parent._session,
+                        proxy=http.proxy,
+                        proxy_auth=http.proxy_auth,
+                        type=InteractionResponseType.pong.value,
+                    )
                 )
             )
             self._responded = True
+            await self._process_callback_response(callback_response)
+
+    async def _process_callback_response(
+        self, callback_response: InteractionCallbackResponse
+    ):
+        if callback_response.get("resource", {}).get("message"):
+            # TODO: fix later to not raise?
+            channel = self._parent.channel
+            if channel is None:
+                raise ClientException(
+                    "Channel for message could not be resolved. Please open a issue on GitHub if you encounter this error."
+                )
+            state = _InteractionMessageState(self._parent, self._parent._state)
+            message = InteractionMessage(state=state, channel=channel, data=callback_response["resource"]["message"])  # type: ignore
+            self._parent._original_response = message
+
+        self._parent.callback = InteractionCallback(callback_response["interaction"])
 
     async def send_message(
         self,
@@ -888,7 +1003,7 @@ class InteractionResponse:
         HTTPException
             Sending the message failed.
         TypeError
-            You specified both ``embed`` and ``embeds``.
+            You specified both ``embed`` and ``embeds``, or sent content or embeds with V2 components.
         ValueError
             The length of ``embeds`` was invalid.
         InteractionResponded
@@ -915,11 +1030,16 @@ class InteractionResponse:
         if content is not None:
             payload["content"] = str(content)
 
-        if ephemeral:
-            payload["flags"] = 64
+        flags = MessageFlags(ephemeral=ephemeral)
 
-        if view is not None:
+        if view:
             payload["components"] = view.to_components()
+            if view.is_components_v2():
+                if embeds or content:
+                    raise TypeError(
+                        "cannot send embeds or content with a view using v2 component logic"
+                    )
+                flags.is_components_v2 = True
 
         if poll is not None:
             payload["poll"] = poll.to_dict()
@@ -954,20 +1074,27 @@ class InteractionResponse:
             elif not all(isinstance(file, File) for file in files):
                 raise InvalidArgument("files parameter must be a list of File")
 
+            if any(isinstance(file, VoiceMessage) for file in files):
+                flags = flags + MessageFlags(is_voice_message=True)
+
+        payload["flags"] = flags.value
+
         parent = self._parent
         adapter = async_context.get()
         http = parent._state.http
         try:
-            await self._locked_response(
-                adapter.create_interaction_response(
-                    parent.id,
-                    parent.token,
-                    session=parent._session,
-                    type=InteractionResponseType.channel_message.value,
-                    proxy=http.proxy,
-                    proxy_auth=http.proxy_auth,
-                    data=payload,
-                    files=files,
+            callback_response: InteractionCallbackResponse = (
+                await self._locked_response(
+                    adapter.create_interaction_response(
+                        parent.id,
+                        parent.token,
+                        session=parent._session,
+                        type=InteractionResponseType.channel_message.value,
+                        proxy=http.proxy,
+                        proxy_auth=http.proxy_auth,
+                        data=payload,
+                        files=files,
+                    )
                 )
             )
         finally:
@@ -975,14 +1102,19 @@ class InteractionResponse:
                 for file in files:
                     file.close()
 
-        if view is not None:
-            if ephemeral and view.timeout is None:
-                view.timeout = 15 * 60.0
-
-            view.parent = self._parent
-            self._parent._state.store_view(view)
-
         self._responded = True
+        await self._process_callback_response(callback_response)
+        if view:
+            if not view.is_finished():
+                if ephemeral and view.timeout is None:
+                    view.timeout = 15 * 60.0
+
+                view.parent = self._parent
+                if view.is_dispatchable():
+                    self._parent._state.store_view(view)
+
+            view.message = await self._parent.original_response()
+
         if delete_after is not None:
             await self._parent.delete_original_response(delay=delete_after)
         return self._parent
@@ -1122,16 +1254,18 @@ class InteractionResponse:
         adapter = async_context.get()
         http = parent._state.http
         try:
-            await self._locked_response(
-                adapter.create_interaction_response(
-                    parent.id,
-                    parent.token,
-                    session=parent._session,
-                    type=InteractionResponseType.message_update.value,
-                    proxy=http.proxy,
-                    proxy_auth=http.proxy_auth,
-                    data=payload,
-                    files=files,
+            callback_response: InteractionCallbackResponse = (
+                await self._locked_response(
+                    adapter.create_interaction_response(
+                        parent.id,
+                        parent.token,
+                        session=parent._session,
+                        type=InteractionResponseType.message_update.value,
+                        proxy=http.proxy,
+                        proxy_auth=http.proxy_auth,
+                        data=payload,
+                        files=files,
+                    )
                 )
             )
         finally:
@@ -1139,11 +1273,13 @@ class InteractionResponse:
                 for file in files:
                     file.close()
 
-        if view and not view.is_finished():
-            view.message = msg
-            state.store_view(view, message_id)
-
         self._responded = True
+        await self._process_callback_response(callback_response)
+        if view:
+            if not view.is_finished():
+                state.store_view(view, message_id)
+            view.message = msg or await parent.original_response()
+
         if delete_after is not None:
             await self._parent.delete_original_response(delay=delete_after)
 
@@ -1179,7 +1315,7 @@ class InteractionResponse:
 
         adapter = async_context.get()
         http = parent._state.http
-        await self._locked_response(
+        callback_response: InteractionCallbackResponse = await self._locked_response(
             adapter.create_interaction_response(
                 parent.id,
                 parent.token,
@@ -1192,6 +1328,7 @@ class InteractionResponse:
         )
 
         self._responded = True
+        await self._process_callback_response(callback_response)
 
     async def send_modal(self, modal: Modal) -> Interaction:
         """|coro|
@@ -1218,7 +1355,7 @@ class InteractionResponse:
         payload = modal.to_dict()
         adapter = async_context.get()
         http = parent._state.http
-        await self._locked_response(
+        callback_response: InteractionCallbackResponse = await self._locked_response(
             adapter.create_interaction_response(
                 parent.id,
                 parent.token,
@@ -1230,6 +1367,7 @@ class InteractionResponse:
             )
         )
         self._responded = True
+        await self._process_callback_response(callback_response)
         self._parent._state.store_modal(modal, self._parent.user.id)
         return self._parent
 
@@ -1257,7 +1395,7 @@ class InteractionResponse:
 
         adapter = async_context.get()
         http = parent._state.http
-        await self._locked_response(
+        callback_response: InteractionCallbackResponse = await self._locked_response(
             adapter.create_interaction_response(
                 parent.id,
                 parent.token,
@@ -1268,9 +1406,10 @@ class InteractionResponse:
             )
         )
         self._responded = True
+        await self._process_callback_response(callback_response)
         return self._parent
 
-    async def _locked_response(self, coro: Coroutine[Any, Any, Any]) -> None:
+    async def _locked_response(self, coro: Coroutine[Any, Any, Any]) -> Any:
         """|coro|
 
         Wraps a response and makes sure that it's locked while executing.
@@ -1280,16 +1419,24 @@ class InteractionResponse:
         coro: Coroutine[Any]
             The coroutine to wrap.
 
+        Returns
+        -------
+        Any
+            The result of the coroutine.
+
         Raises
         ------
         InteractionResponded
             This interaction has already been responded to before.
+
+        .. versionchanged:: 2.7
+            Return the result of the coroutine
         """
         async with self._response_lock:
             if self.is_done():
                 coro.close()  # cleanup un-awaited coroutine
                 raise InteractionResponded(self._parent)
-            await coro
+            return await coro
 
 
 class _InteractionMessageState:
@@ -1613,3 +1760,36 @@ class AuthorizingIntegrationOwners:
         if not self.guild_id:
             return None
         return self._state._get_guild(self.guild_id)
+
+
+class InteractionCallback:
+    """Information about the status of the interaction response.
+
+    .. versionadded:: 2.7
+    """
+
+    def __init__(self, data: InteractionCallbackPayload):
+        self._response_message_loading: bool = data.get(
+            "response_message_loading", False
+        )
+        self._response_message_ephemeral: bool = data.get(
+            "response_message_ephemeral", False
+        )
+
+    def __repr__(self):
+        return (
+            f"<InteractionCallback "
+            f"_response_message_loading={self._response_message_loading} "
+            f"_response_message_ephemeral={self._response_message_ephemeral}>"
+        )
+
+    def is_loading(self) -> bool:
+        """Indicates whether the response message is in a loading state."""
+        return self._response_message_loading
+
+    def is_ephemeral(self) -> bool:
+        """Indicates whether the response message is ephemeral.
+
+        This might be useful for determining if the message was forced to be ephemeral.
+        """
+        return self._response_message_ephemeral
