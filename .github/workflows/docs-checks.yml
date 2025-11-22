@@ -22,8 +22,6 @@ on:
         type: boolean
         description: "Whether to run the linkcheck"
         default: true
-  schedule:
-    - cron: "0 0 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
