@@ -1019,6 +1019,7 @@ class InteractionResponse:
         view: BaseView | None = None,
         tts: bool = False,
         ephemeral: bool = False,
+        silent: bool = False,
         allowed_mentions: AllowedMentions | None = None,
         file: File | None = None,
         files: list[File] | None = None,
@@ -1099,7 +1100,7 @@ class InteractionResponse:
         if content is not None:
             payload["content"] = str(content)
 
-        flags = MessageFlags(ephemeral=ephemeral)
+        flags = MessageFlags(ephemeral=ephemeral, suppress_notifications=silent)
 
         if view:
             payload["components"] = view.to_components()
