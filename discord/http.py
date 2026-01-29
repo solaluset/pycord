@@ -1506,18 +1506,6 @@ class HTTPClient:
             Route("GET", "/guilds/{guild_id}", guild_id=guild_id), params=params
         )
 
-    def delete_guild(self, guild_id: Snowflake) -> Response[None]:
-        return self.request(Route("DELETE", "/guilds/{guild_id}", guild_id=guild_id))
-
-    def create_guild(self, name: str, icon: str | None) -> Response[guild.Guild]:
-        payload = {
-            "name": name,
-        }
-        if icon:
-            payload["icon"] = icon
-
-        return self.request(Route("POST", "/guilds"), json=payload)
-
     def edit_guild(
         self, guild_id: Snowflake, *, reason: str | None = None, **fields: Any
     ) -> Response[guild.Guild]:
@@ -1525,7 +1513,6 @@ class HTTPClient:
             "name",
             "icon",
             "afk_timeout",
-            "owner_id",
             "afk_channel_id",
             "splash",
             "discovery_splash",
@@ -1548,15 +1535,6 @@ class HTTPClient:
         return self.request(
             Route("PATCH", "/guilds/{guild_id}", guild_id=guild_id),
             json=payload,
-            reason=reason,
-        )
-
-    def edit_guild_mfa(
-        self, guild_id: Snowflake, required: bool, *, reason: str | None
-    ) -> Response[guild.GuildMFAModify]:
-        return self.request(
-            Route("POST", "/guilds/{guild_id}/mfa", guild_id=guild_id),
-            json={"level": int(required)},
             reason=reason,
         )
 
@@ -1614,19 +1592,6 @@ class HTTPClient:
                 guild_id=guild_id,
                 code=code,
             )
-        )
-
-    def create_from_template(
-        self, code: str, name: str, icon: str | None
-    ) -> Response[guild.Guild]:
-        payload = {
-            "name": name,
-        }
-        if icon:
-            payload["icon"] = icon
-
-        return self.request(
-            Route("POST", "/guilds/templates/{code}", code=code), json=payload
         )
 
     def get_bans(
@@ -2152,6 +2117,11 @@ class HTTPClient:
 
     def get_roles(self, guild_id: Snowflake) -> Response[list[role.Role]]:
         return self.request(Route("GET", "/guilds/{guild_id}/roles", guild_id=guild_id))
+
+    def get_roles_member_counts(self, guild_id: Snowflake) -> Response[dict[str, int]]:
+        return self.request(
+            Route("GET", "/guilds/{guild_id}/roles/member-counts", guild_id=guild_id)
+        )
 
     def get_role(self, guild_id: Snowflake, role_id: Snowflake) -> Response[role.Role]:
         return self.request(

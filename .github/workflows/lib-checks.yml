@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: "Setup Python"
         uses: actions/setup-python@v6
         with:
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: "Setup Python"
         uses: actions/setup-python@v6
         with:
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: "Setup Python"
         uses: actions/setup-python@v6
         with:
@@ -81,7 +81,7 @@ jobs:
           pip install -r requirements/dev.txt
       - name: "Setup cache"
         id: cache-pylint
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .pylint.d
           key: pylint
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: "Setup Python"
         uses: actions/setup-python@v6
         with:
@@ -105,7 +105,7 @@ jobs:
           pip install -r requirements/dev.txt
       - name: "Setup cache"
         id: cache-mypy
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .mypy_cache
           key: mypy
@@ -125,7 +125,7 @@ jobs:
       PYTHON: ${{ matrix.python-version }}
     steps:
       - name: "Checkout Repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: "Setup Python"
         uses: actions/setup-python@v6
         with:
@@ -140,7 +140,7 @@ jobs:
           pip install -r requirements/dev.txt
       - name: "Setup cache"
         id: cache-pytest
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .pytest_cache
           key: ${{ matrix.os }}-${{ matrix.python-version }}-pytest
