@@ -1059,7 +1059,6 @@ class InteractionResponse:
         view: BaseView | None = None,
         tts: bool = False,
         ephemeral: bool = False,
-        silent: bool = False,
         allowed_mentions: AllowedMentions | None = None,
         file: File | None = None,
         files: list[File] | None = None,
